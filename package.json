@@ -4,7 +4,12 @@
   "description": "Bot de Bom dia da craco",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "postinstall": "babel src -d dist",
+    "test": "babel-node ./src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lfdo20/BomDiaCracoviansES6.git"
   },
   "keywords": [
     "bot",
@@ -15,12 +20,28 @@
   "author": "Leandro Fernandes lfdo <lfdo20@gmail.com> (https://lfdo20.github.io/lfdo)",
   "license": "MIT",
   "dependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
     "dotenv": "^4.0.0",
     "dropbox": "^2.5.12",
     "express": "^4.16.2",
-    "feed-read": "0.0.1",
     "moment": "^2.20.1",
     "node-telegram-bot-api": "^0.29.0",
+    "request": "^2.83.0",
     "twit": "^2.2.9"
+  },
+  "babel": {
+    "presets": [
+      "env"
+    ]
+  },
+  "quokka": {
+    "babel": false
+  },
+  "devDependencies": {
+    "eslint": "^4.17.0",
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-plugin-import": "^2.8.0"
   }
 }
