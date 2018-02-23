@@ -8,7 +8,7 @@ import Bot from 'node-telegram-bot-api';
 import cBtc from './convertbtc';
 
 // local enviroment variables
-// dotenv.load();
+dotenv.load();
 
 // Telegram api config
 const bot = new Bot(process.env.BOT_TOKEN, { polling: true });
@@ -20,7 +20,8 @@ let bddata = {},
   newptv,
   newBdiaCount = 0,
   newgifCount = 0,
-  rgifcount = 0;
+  rgifcount = 0,
+  bdiadaycount = [[3, 15, 27, 12, 9], [0, 0], 0, 0];
 
 const dropfilesurl = [[process.env.DROP_DATA, 'data.json', 'bddata'], [process.env.DROP_GIF, 'gifdata.json', 'gifdata']];
 let gifdata = {
@@ -61,6 +62,8 @@ streamTwit.on('tweet', tweetReply);
 
 // IDEA: json não trabalha com " " dá problema, tem que
 // converter regex pra detectar : (.+)(')(.+)(')(.+)?
+
+// NOTE: buscar um novo algoritmo randomGif
 
 console.log('bot server started...');
 
@@ -252,15 +255,16 @@ function getGif() {
 
 const gftagrxdays = /^(p(u|o)+taria+)$/gi;
 const gftagrxfri = /^(.+)?(p(u|o)+taria+)(.+)?$/gi;
-const gftagrx = () => nowDay() === 'Tue' ? gftagrxfri : gftagrxdays;
+const gftagrx = () => nowDay() === 'Fri' ? gftagrxfri : gftagrxdays;
 
 bot.onText(gftagrx(), (msg) => {
   if (nowDay() !== 'Fri') { // Correto é Fri
     bot.sendMessage(msg.chat.id, 'Hoje não é dia né. Tá achando que putaria é bagunça!?').then(() => {
     });
   } else if (!moment().isBetween(STime, ETime, 'minute', '[]')) {
-    let faltam = Math.abs(moment().diff(STime, 'minute'));
-    faltam = faltam > 60 ? `${Math.round(faltam / 60)} h e ${faltam} % 60 min` : `${faltam} min`;
+    const timeS = moment.unix(msg.date);
+    let faltam = Math.abs(timeS.diff(STime, 'minute'));
+    faltam = faltam > 60 ? `${Math.round(faltam / 60)} h e ${faltam % 60} min` : `${faltam} min`;
     bot.sendMessage(msg.chat.id, `Caaaaalma, faltam ${faltam} para começar a putaria!`).then(() => { });
   } else {
     const gifId = getGif();
@@ -268,7 +272,7 @@ bot.onText(gftagrx(), (msg) => {
     if (gifId !== undefined) {
       bot.sendDocument(msg.chat.id, gifId).then(() => {
         newgifCount += 1;
-        console.log(`Contador novo gif: ${newgifCount}`);
+        console.log(`Contador gif: ${newgifCount}`);
         rgifcount += 1;
         console.log(`Contador gif random: ${rgifcount}`);
         if (newgifCount >= 5) {
@@ -394,16 +398,18 @@ let putexec = false,
   vcmsg = '';
 
 // mensagens de início / fim de hora da putaria
-let timeouttemp = 5;
-bot.on('message', (msg) => {
+// let timeouttemp = 0;
+bot.onText(/(.)?/gi, (msg) => {
   if (nowDay() === 'Fri') {
     if (!putexec) {
       const timeS = moment.unix(msg.date).format('HH');
       if (timeS === '23') {
-        const faltam = Math.abs(moment().diff(ETime, 'minute'));
+        const timeN = moment.unix(msg.date);
+        const faltam = Math.abs(timeN.diff(ETime, 'minute'));
         putariaRemenber(msg, faltam);
       } else if (timeS === '13') { // 13
-        const faltam = moment().diff(moment('14:00', 'HHmm'), 'minute') * -1;
+        const timeN = moment.unix(msg.date);
+        const faltam = timeN.diff(moment('14:00', 'HHmm'), 'minute') * -1;
         console.log('t3 ', faltam); // STime
         if (faltam < 30 && faltam > 0 && !putstartcheck) {
           putstartcheck = true;
@@ -452,16 +458,34 @@ bot.on('message', (msg) => {
   }
 
   // nada mais para validar ....
-  // console.log(msg);
-  setTimeout(() => {
-    if (timeouttemp > 0) {
-      timeouttemp = 5;
-    } else {
-      timeouttemp = 0;
+  if (bdiadaycount[0].length > 0) {
+    bdiadaycount[1][0] = 18 / (bdiadaycount[0].length + 1);
+    const timeS = moment.unix(msg.date);
+
+    if (bdiadaycount[1][1] === 0) {
+      bdiadaycount[2] = bdiadaycount[0][0];
+      bdiadaycount[1][1] = moment.unix(msg.date);
+      bdiadaycount[3] = Math.ceil(bdiadaycount[0].length / 1.5);
     }
-  }, 3000);
-  if (timeouttemp === 8) {
-    bot.sendMessage(msg.chat.id, `Nada mais para validar @${msg.from.username} ...`);
+
+    const faltam = Math.abs(timeS.diff(bdiadaycount[1][1], 'minute'));
+    if (faltam <= 0) {
+      bdiadaycount[2] -= 1;
+      console.log('zero', bdiadaycount);
+      if (bdiadaycount[2] <= 0 && bdiadaycount[3] >= 0) {
+        console.log('teste 1');
+
+        // bot.sendMessage(msg.chat.id, `Não @${msg.from.username}, nada mais para validar  ...`);
+        bdiadaycount[3] -= 1;
+      } else if (bdiadaycount[3] <= 0) {
+        console.log('teste 2');
+
+        bdiadaycount[0].shift();
+        bdiadaycount[2] = bdiadaycount[0][0];
+        bdiadaycount[3] = Math.ceil(bdiadaycount[0].length / 1.5);
+        bdiadaycount[1][1] = moment.unix(msg.date).add(bdiadaycount[1][0], 'h');
+      }
+    }
   }
 
   if (dgiftemp !== undefined) {
@@ -556,7 +580,6 @@ bot.onText(/^(.+)?bitcoin(.+)?$/gim, (msg, match) => {
 
 //  comando apra retornar bitcoin especcífico
 bot.onText(/^\/bdcbtc(\s)(\d)(\s)(\w+)(\s)(\w{3})$|^\/bdcbtc@bomdiacracobot$/, (msg, match) => {
-  // console.log(match.length, match[4].toUpperCase(), match[6].toUpperCase(), match[2]);
   cBtc(match[4].toUpperCase(), match[6].toUpperCase(), match[2])
     .then((data) => {
       bot.sendMessage(msg.chat.id, data).then(() => {
@@ -576,11 +599,6 @@ bot.onText(/^\/bdcstatus$|^\/bdcstatus@bomdiacracobot$/, (msg, match) => {
     // reply sent!
   });
 });
-
-// NOTE: buscar um novo algoritmo randomGif
-
-// NOTE: comando para buscar e mostrar gifs repetidos pelo tamanho ou nome
-// e perguntar para deletar.
 
 // listen de bom dias
 const bdrx = /^(((bo|bu)(\w+)?)(\s?)((di|de|dj|ena)\w+))(\s?|\.+|,|!|\?)?(\s)?(.+)?$/gi;
@@ -642,6 +660,7 @@ bot.onText(bdrx, (msg, match) => {
   }
 
   bot.sendMessage(msg.chat.id, bdiaback).then(() => {
+    bdiadaycount.push(msg.text.length);
     if (newBdia !== undefined) {
       newTwit(bdiaback);
     }
