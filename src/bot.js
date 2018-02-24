@@ -21,7 +21,7 @@ let bddata = {},
   newBdiaCount = 0,
   newgifCount = 0,
   rgifcount = 0,
-  bdiadaycount = [[3, 15, 27, 12, 9], [0, 0], 0, 0];
+  bdiadaycount = [[], [0, 0], 0, 0];
 
 const dropfilesurl = [[process.env.DROP_DATA, 'data.json', 'bddata'], [process.env.DROP_GIF, 'gifdata.json', 'gifdata']];
 let gifdata = {
@@ -459,31 +459,39 @@ bot.onText(/(.)?/gi, (msg) => {
 
   // nada mais para validar ....
   if (bdiadaycount[0].length > 0) {
-    bdiadaycount[1][0] = 18 / (bdiadaycount[0].length + 1);
+    bdiadaycount[1][0] = Math.ceil(18 / (bdiadaycount[0].length + 1)); // padrão 18
     const timeS = moment.unix(msg.date);
 
     if (bdiadaycount[1][1] === 0) {
       bdiadaycount[2] = bdiadaycount[0][0];
       bdiadaycount[1][1] = moment.unix(msg.date);
-      bdiadaycount[3] = Math.ceil(bdiadaycount[0].length / 1.5);
+      bdiadaycount[3] = Math.ceil(bdiadaycount[0].length / 2);
     }
 
-    const faltam = Math.abs(timeS.diff(bdiadaycount[1][1], 'minute'));
-    if (faltam <= 0) {
-      bdiadaycount[2] -= 1;
-      console.log('zero', bdiadaycount);
-      if (bdiadaycount[2] <= 0 && bdiadaycount[3] >= 0) {
-        console.log('teste 1');
+    const faltam = timeS.isAfter(bdiadaycount[1][1], 'minute');
+    console.log('Faltam para Não Validar:', timeS.diff(bdiadaycount[1][1], 'minute'), faltam);
 
-        // bot.sendMessage(msg.chat.id, `Não @${msg.from.username}, nada mais para validar  ...`);
+    if (faltam) {
+      bdiadaycount[2] -= 1;
+      // console.log('Validar Bdias: ', bdiadaycount[0]);
+      // console.log('Validar Horas: ', bdiadaycount[1]);
+      console.log('Validar Regressiva: ', bdiadaycount[2]);
+      // console.log('Validar Crescente: ', bdiadaycount[3]);
+
+      if (bdiadaycount[2] <= 0 && bdiadaycount[3] >= 0) {
+        console.log('Validar Crescente fim: ', bdiadaycount[3]);
+        bot.sendMessage(msg.chat.id, `Não @${msg.from.username}, nada mais para validar  ...`);
         bdiadaycount[3] -= 1;
       } else if (bdiadaycount[3] <= 0) {
-        console.log('teste 2');
-
         bdiadaycount[0].shift();
         bdiadaycount[2] = bdiadaycount[0][0];
-        bdiadaycount[3] = Math.ceil(bdiadaycount[0].length / 1.5);
+        bdiadaycount[3] = Math.ceil(bdiadaycount[0].length / 2);
         bdiadaycount[1][1] = moment.unix(msg.date).add(bdiadaycount[1][0], 'h');
+        console.log('Validar Zerar:');
+        console.log('Validar Bdias: ', bdiadaycount[0]);
+        console.log('Validar Horas: ', bdiadaycount[1]);
+        console.log('Validar Regressiva: ', bdiadaycount[2]);
+        console.log('Validar Crescente: ', bdiadaycount[3]);
       }
     }
   }
@@ -565,11 +573,9 @@ bot.onText(hjdiarx, (msg, match) => {
 
 //  retornar valor quando disserem bitcoin
 let btctemp = 5;
-// bt().then((data) => { console.log('tres', data); })
-
 bot.onText(/^(.+)?bitcoin(.+)?$/gim, (msg, match) => {
-  console.log(moment().diff(btctemp, 'minutes'), btctemp, moment().format('HHmm'));
-  if (Math.abs(moment().diff(btctemp, 'minute')) >= 0 | btctemp === undefined) {
+  // console.log(moment().diff(btctemp, 'minutes'), btctemp, moment().format('HHmm'));
+  if (Math.abs(moment().diff(btctemp, 'minute')) >= 3 | btctemp === undefined) {
     cBtc('BTC', 'BRL', 1).then((data) => {
       bot.sendMessage(msg.chat.id, data).then(() => {
         btctemp = moment.unix(msg.date);
@@ -635,7 +641,6 @@ bot.onText(bdrx, (msg, match) => {
       const ptvnum = Math.floor(Math.random() * pontosvar.length);
       const lbds = latebdsay.findIndex(str => str === bomdia[bdnum]);
       const lbdr = latebdreceived.findIndex(str => str === bomdia[bdnum]);
-      console.log(lbds, lbdr, bdiaback);
 
       if (lbds === -1 && lbdr === -1) {
         i = bomdia.length;
@@ -660,7 +665,10 @@ bot.onText(bdrx, (msg, match) => {
   }
 
   bot.sendMessage(msg.chat.id, bdiaback).then(() => {
-    bdiadaycount.push(msg.text.length);
+    if (msg.text.length > 15 && bdiadaycount[0].length <= 5) {
+      bdiadaycount[0].push(msg.text.length);
+      console.log(bdiadaycount[0]);
+    }
     if (newBdia !== undefined) {
       newTwit(bdiaback);
     }
