@@ -62,5 +62,12 @@ typings/
 .env
 .rar
 
+# backup directory
+.bkp
+
+# data files
+bddata.json
+gifdata.json
+nvdata.json
 
 # End of https://www.gitignore.io/api/node

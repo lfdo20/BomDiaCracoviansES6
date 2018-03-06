@@ -8,7 +8,7 @@ function cBtc(cripto = 'BTC', currency = 'BRL', amount = 1) {
     request(url, (error, response, body) => {
       if (body.length > 70) {
         const apiResponse = JSON.parse(body);
-        resolve(`${amount} ${cripto}  =  ${apiResponse.price} ${currency}`);
+        resolve(`${amount} ${cripto}  =  ${apiResponse.price.toLocaleString('pt-BR', { style: 'currency', currency: `${currency}` })}`);
       } else {
         resolve(`Erro:  ${body}`);
       }

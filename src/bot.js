@@ -21,9 +21,15 @@ let bddata = {},
   newBdiaCount = 0,
   newgifCount = 0,
   rgifcount = 0,
-  bdiadaycount = [[], [0, 0], 0, 0];
+  bdiadaycount = [[], [0, 0], 0, 0],
+  nvloop = 0;
 
-const dropfilesurl = [[process.env.DROP_DATA, 'data.json', 'bddata'], [process.env.DROP_GIF, 'gifdata.json', 'gifdata']];
+const dropfilesurl = [[process.env.DROP_DATA, 'bddata.json', 'bddata'],
+  [process.env.DROP_GIF, 'gifdata.json', 'gifdata'],
+  [process.env.DROP_NV, 'nvdata.json', 'nvdata']
+];
+
+// [process.env.DROP_NV, 'nvdata.json', 'nvdata']
 let gifdata = {
   newgif: [],
   ckdgif: [],
@@ -63,25 +69,31 @@ streamTwit.on('tweet', tweetReply);
 // IDEA: json não trabalha com " " dá problema, tem que
 // converter regex pra detectar : (.+)(')(.+)(')(.+)?
 
-// NOTE: buscar um novo algoritmo randomGif
-
 console.log('bot server started...');
 
+process.on('SIGTERM', () => {
+  console.log('Salvando dados e finalizando bot..');
+
+  saveNewdata('bd', bddata);
+  saveNewdata('gif', gifdata);
+  saveNewdata('nv', bdiadaycount);
+  process.exit(0);
+});
+
 // pega o arquivo no dropbox e transforma em objeto
-// bddata = JSON.parse(require('fs').readFileSync('data.json', 'utf8'));
 function startRead() {
   dropfilesurl.forEach((id) => {
     dbx.sharingGetSharedLinkFile({ url: id[0] })
       .then((data) => {
         fs.writeFileSync(data.name, data.fileBinary, 'binary', (err) => {
-          if (err) { throw err; } else {
-            // console.log('File: ' + data.name + ' saved.');
-          }
+          if (err) { throw err; }
         });
         if (id[2] === 'bddata') {
-          bddata = JSON.parse(fs.readFileSync('./data.json', 'utf8'));
+          bddata = JSON.parse(fs.readFileSync('./bddata.json', 'utf8'));
         } else if (id[2] === 'gifdata') {
           gifdata = JSON.parse(fs.readFileSync('./gifdata.json', 'utf8'));
+        } else if (id[2] === 'nvdata') {
+          bdiadaycount = JSON.parse(fs.readFileSync('./nvdata.json', 'utf8'));
         }
       }).catch((err) => {
         throw err;
@@ -105,7 +117,6 @@ bot.on('message', (msg) => {
 bot.onText(/^\/bdcdia$|^\/bdcdia@bomdiacracobot$/, (msg) => {
   const text = 'https://www.dropbox.com/s/ty8b23y8qmcfa0y/bdcdia.jpg?raw=1';
   bot.sendPhoto(msg.chat.id, text).then(() => {
-    // reply sent!
   });
 });
 
@@ -114,13 +125,14 @@ bot.onText(/^\/bdcultimos$|^\/bdcultimos@bomdiacracobot$/, (msg) => {
   const text = `${bddata.latebdreceived.map(elem => `${elem}`).join('\n')}`;
   console.log(text);
   bot.sendMessage(msg.chat.id, text).then(() => {
-    // reply sent!
   });
 });
 
 // comando para salvar arquivos
-bot.onText(/^\/bdcsave\s(data|gif)$/, (msg, match) => {
-  match[1] === 'data' ? saveNewdata(bddata) : saveNewdata(gifdata);
+bot.onText(/^\/bdcsave$/, (msg, match) => {
+  saveNewdata('bd', bddata);
+  saveNewdata('gif', gifdata);
+  saveNewdata('nv', bdiadaycount);
   bot.sendMessage(msg.chat.id, 'Salvo!');
 });
 
@@ -144,8 +156,9 @@ bot.onText(/^\/bdcadmin\s(.+)$/, (msg, match) => {
     Comandos de manutenção:
 
     /bdcgifdup - Checar duplicidade de gifs.
+    /bdcnv - log de status Não Validar..
     /bdccheck X - Checar e validar os gifs recebidos. (X = quantidade)
-    /bdcsave - Salvar os arquivos de dados. (data | gif)`;
+    /bdcsave - Salvar todos os arquivos de dados.`;
     bot.sendMessage(msg.chat.id, text).then(() => { });
   } else {
     const text = 'Senha errada.';
@@ -194,10 +207,8 @@ bot.onText(/^\/bdcgifdup$/gi, (msg, match) => {
 bot.on('document', (msg) => {
   if (nowDay() === 'Fri') { // check is is Fri
     if (msg.document.mime_type === 'video/mp4') {
-      // console.log(msg.document);
       // var gifthumb = 'https://api.telegram.org/file/bot'+token+'/'+msg.document.thumb.file_path;
       const newGf = [msg.document.file_id, msg.document.file_size.toString()];
-      // console.log(gifthumb);
       checkBdData(gifdata.newgif, newGf, 'gif');
       rgifcount += 1;
       console.log(`Gif aleatório contador: ${rgifcount}`);
@@ -211,12 +222,9 @@ bot.on('document', (msg) => {
   }
 });
 
-// NOTE: data não está detectando o dia após meia noite.
-
 // função para lembrar que vai começar a putaria
 let endputsaid = 0;
 function putariaRemenber(msg, faltam) {
-  // console.log(faltam);
   if (faltam <= 60 && endputsaid === 0) {
     bot.sendMessage(msg.chat.id, `Faltam ${faltam} minutos para acabar a putaria! 😭😭`).then(() => {
       endputsaid = 2;
@@ -268,7 +276,6 @@ bot.onText(gftagrx(), (msg) => {
     bot.sendMessage(msg.chat.id, `Caaaaalma, faltam ${faltam} para começar a putaria!`).then(() => { });
   } else {
     const gifId = getGif();
-    // console.log('testeoi', gifId);
     if (gifId !== undefined) {
       bot.sendDocument(msg.chat.id, gifId).then(() => {
         newgifCount += 1;
@@ -276,7 +283,7 @@ bot.onText(gftagrx(), (msg) => {
         rgifcount += 1;
         console.log(`Contador gif random: ${rgifcount}`);
         if (newgifCount >= 5) {
-          saveNewdata(gifdata);
+          saveNewdata('gif', gifdata);
           newgifCount = 0;
         }
       });
@@ -294,17 +301,12 @@ function randomGif(msg) {
   // console.log(gifdata.tumblrgif.length);
   if (tumblrgif.length > 0) {
     bot.sendDocument(msg.chat.id, tumblrgif[0]).then(() => {
-      // console.log('foi');
       tumblrgif.shift();
       rgifcount = 0;
     });
   } else if (tumblrgif.length === 0) {
     (function getlink() {
-      // ix = gifdata.tumblrgif[gifdata.tumblrgif.length];
-      // if (ix < gifdata.tumblrlist.length) {
       uri = tumblrlist[ix][0].toString();
-      // console.log('rgif : '+ix+' & '+uri);
-      // getFeed(uri, ix).then((i) => {
       (function getFeed() {
         return new Promise((resolve, reject) => {
           request(uri, (err, res, body) => {
@@ -319,13 +321,11 @@ function randomGif(msg) {
               ix += 1;
               tumblrlist.pop();
               tumblrlist.push(ix.toString());
-              saveNewdata(gifdata);
+              saveNewdata('gif', gifdata);
             });
           });
         });
       }());
-      // });
-      // }
     }());
   }
 }
@@ -351,7 +351,7 @@ let ckgfid = '',
   checknum = 0;
 
 const endkeyboard = (msg) => {
-  saveNewdata(gifdata);
+  saveNewdata('gif', gifdata);
   bot.sendMessage(msg.chat.id, 'Nada mais para validar..', {
     reply_to_message_id: msg.message_id,
     reply_markup: {
@@ -362,7 +362,9 @@ const endkeyboard = (msg) => {
 };
 
 const newgfcheck = (msg) => {
-  if (gifdata.newgif.length > 0 && checknum > 0) {
+  console.log(checknum);
+
+  if (gifdata.newgif.length > 0 && checknum > 1) {
     ckgfid = gifdata.newgif[0][0];
     const urigif = `https://api.telegram.org/bot${process.env.BOT_TOKEN}/getFile?file_id=${ckgfid}`;
     console.log(urigif);
@@ -381,14 +383,16 @@ const newgfcheck = (msg) => {
     }).then(() => {
       checknum -= 1;
     });
-  } else {
+  }
+  if (checknum === 1) {
     endkeyboard(msg);
     checknum = 0;
   }
 };
 
 bot.onText(/^\/bdccheck(\s)(\d+)$/, (msg, match) => {
-  checknum = match[2];
+  checknum = Number(match[2]);
+  checknum += 1;
   newgfcheck(msg);
 });
 
@@ -398,7 +402,6 @@ let putexec = false,
   vcmsg = '';
 
 // mensagens de início / fim de hora da putaria
-// let timeouttemp = 0;
 bot.onText(/(.)?/gi, (msg) => {
   if (nowDay() === 'Fri') {
     if (!putexec) {
@@ -410,13 +413,13 @@ bot.onText(/(.)?/gi, (msg) => {
       } else if (timeS === '13') { // 13
         const timeN = moment.unix(msg.date);
         const faltam = timeN.diff(moment('14:00', 'HHmm'), 'minute') * -1;
-        console.log('t3 ', faltam); // STime
+        console.log('Falta para começar a putaria: ', faltam);
         if (faltam < 30 && faltam > 0 && !putstartcheck) {
           putstartcheck = true;
           vcmsg = msg.chat.id;
           console.log(msg, vcmsg, timeS, faltam);
           setTimeout(() => {
-            bot.sendAudio(vcmsg, 'CQADAQADCgAD9MvIRuM_NpJIg6-YAg'); // msg.chat.id
+            bot.sendAudio(vcmsg, 'CQADAQADCgAD9MvIRuM_NpJIg6-YAg');
             setTimeout(() => { putstartcheck = false; }, 60000);
           }, (faltam * 60) * 1000);
         }
@@ -424,20 +427,17 @@ bot.onText(/(.)?/gi, (msg) => {
       putexec = true;
       setTimeout(() => { putexec = false; }, 3000);
     }
-    // putariaCalc(msg);
   }
 
   const { ckdgif, newgif } = gifdata;
 
   if (checknum > 0) {
-    // console.log(msg);
     const cks = '👍 sim';
     if (msg.text.toString().toLowerCase().indexOf(cks) === 0) {
       console.log('ok sim');
       newgif.shift();
       const temp = [ckgfid, ckgfsize.toString()];
       ckdgif.push(temp);
-      // console.log(gifdata.ckdgif);
       newgfcheck(msg);
     }
 
@@ -458,8 +458,22 @@ bot.onText(/(.)?/gi, (msg) => {
   }
 
   // nada mais para validar ....
+  const nvlog = faltam => `
+    Validar Zerar...
+    Validar Bdias: ${bdiadaycount[0]}
+    Validar Intervalo: ${bdiadaycount[1]}
+    Validar Regressiva: ${bdiadaycount[2]}
+    Minutos para liberar: ${faltam}
+    Validações restantes: ${bdiadaycount[3]}
+  `;
+
+  if (msg.text.toString().toLowerCase() === 'bdcnv') {
+    const timeS = moment.unix(msg.date);
+    bot.sendMessage(msg.chat.id, nvlog(timeS.diff(bdiadaycount[1][1], 'minute')));
+  }
+
   if (bdiadaycount[0].length > 0) {
-    bdiadaycount[1][0] = Math.ceil(18 / (bdiadaycount[0].length + 1)); // padrão 18
+    bdiadaycount[1][0] = Math.ceil(18 / (bdiadaycount[0].length + 1));
     const timeS = moment.unix(msg.date);
 
     if (bdiadaycount[1][1] === 0) {
@@ -469,15 +483,15 @@ bot.onText(/(.)?/gi, (msg) => {
     }
 
     const faltam = timeS.isAfter(bdiadaycount[1][1], 'minute');
-    console.log('Faltam para Não Validar:', timeS.diff(bdiadaycount[1][1], 'minute'), faltam);
+
+    if (timeS.isAfter(nvloop, 'minute') || nvloop === 0) {
+      nvlog(timeS.diff(bdiadaycount[1][1], 'minute'));
+      saveNewdata('nv', bdiadaycount);
+      nvloop = moment.unix(msg.date).add(60, 'minutes');
+    }
 
     if (faltam) {
       bdiadaycount[2] -= 1;
-      // console.log('Validar Bdias: ', bdiadaycount[0]);
-      // console.log('Validar Horas: ', bdiadaycount[1]);
-      console.log('Validar Regressiva: ', bdiadaycount[2]);
-      // console.log('Validar Crescente: ', bdiadaycount[3]);
-
       if (bdiadaycount[2] <= 0 && bdiadaycount[3] >= 0) {
         console.log('Validar Crescente fim: ', bdiadaycount[3]);
         bot.sendMessage(msg.chat.id, `Não @${msg.from.username}, nada mais para validar  ...`);
@@ -487,15 +501,13 @@ bot.onText(/(.)?/gi, (msg) => {
         bdiadaycount[2] = bdiadaycount[0][0];
         bdiadaycount[3] = Math.ceil(bdiadaycount[0].length / 2);
         bdiadaycount[1][1] = moment.unix(msg.date).add(bdiadaycount[1][0], 'h');
-        console.log('Validar Zerar:');
-        console.log('Validar Bdias: ', bdiadaycount[0]);
-        console.log('Validar Horas: ', bdiadaycount[1]);
-        console.log('Validar Regressiva: ', bdiadaycount[2]);
-        console.log('Validar Crescente: ', bdiadaycount[3]);
+        saveNewdata('nv', bdiadaycount);
+        nvlog(faltam);
       }
     }
   }
 
+  // verificador de duplicados
   if (dgiftemp !== undefined) {
     const ckdl = 'proximo';
     if (msg.text.toString().toLowerCase().indexOf(ckdl) === 0) {
@@ -574,8 +586,7 @@ bot.onText(hjdiarx, (msg, match) => {
 //  retornar valor quando disserem bitcoin
 let btctemp = 5;
 bot.onText(/^(.+)?bitcoin(.+)?$/gim, (msg, match) => {
-  // console.log(moment().diff(btctemp, 'minutes'), btctemp, moment().format('HHmm'));
-  if (Math.abs(moment().diff(btctemp, 'minute')) >= 3 | btctemp === undefined) {
+  if (Math.abs(moment().diff(btctemp, 'minute')) >= 3 || btctemp === undefined) {
     cBtc('BTC', 'BRL', 1).then((data) => {
       bot.sendMessage(msg.chat.id, data).then(() => {
         btctemp = moment.unix(msg.date);
@@ -585,7 +596,7 @@ bot.onText(/^(.+)?bitcoin(.+)?$/gim, (msg, match) => {
 });
 
 //  comando apra retornar bitcoin especcífico
-bot.onText(/^\/bdcbtc(\s)(\d)(\s)(\w+)(\s)(\w{3})$|^\/bdcbtc@bomdiacracobot$/, (msg, match) => {
+bot.onText(/^\/bdcbtc(\s)(\d+)(\s)(\w+)(\s)(\w{3})$|^\/bdcbtc@bomdiacracobot$/, (msg, match) => {
   cBtc(match[4].toUpperCase(), match[6].toUpperCase(), match[2])
     .then((data) => {
       bot.sendMessage(msg.chat.id, data).then(() => {
@@ -602,7 +613,6 @@ bot.onText(/^\/bdcstatus$|^\/bdcstatus@bomdiacracobot$/, (msg, match) => {
   Nós temos ${gifdata.tumblrlist.length} tumbler links.
    `;
   bot.sendMessage(msg.chat.id, text).then(() => {
-    // reply sent!
   });
 });
 
@@ -618,9 +628,9 @@ bot.onText(bdrx, (msg, match) => {
   // checa por arrobas que não podem
   if (newBdia !== undefined) {
     notBdia = newBdia.match(/(\@)/gi, '$1');
-    // check se o bom dia foi dado corretamente
   }
 
+  // check se o bom dia foi dado corretamente
   if (newBdia === undefined) {
     newBomDia();
     saveLastSay();
@@ -659,7 +669,6 @@ bot.onText(bdrx, (msg, match) => {
   function saveLastListen() {
     latebdreceived.shift();
     latebdreceived.push(newBdia);
-    // console.log(bddata.latebdreceived);
     checkBdData(bddata.bomdia, newBdia, 'bomdia');
     checkBdvData(newbdv);
   }
@@ -668,23 +677,24 @@ bot.onText(bdrx, (msg, match) => {
     if (msg.text.length > 15 && bdiadaycount[0].length <= 5) {
       bdiadaycount[0].push(msg.text.length);
       console.log(bdiadaycount[0]);
+      saveNewdata('nv', bdiadaycount);
     }
-    if (newBdia !== undefined) {
+    if (bdiaback !== undefined) {
       newTwit(bdiaback);
     }
   });
 });
 
 // Twitter sender
-function newTwit(status) {
-  T.post('statuses/update', { status: 'status' }, (err, data, response) => { });
+function newTwit(staText) {
+  console.log('twit status', staText);
+  T.post('statuses/update', { status: staText }, (err, data, response) => { });
 }
 
 // Twitter Replyer
 const bdrxtw = /^(@\w+\s)(((bo|bu)(\w+)?)(\s?)((di|de|dj|ena)\w+))(\s?|\.+|,|!|\?)?(\s)?(.+)?$/gi;
 function tweetReply(tweet) {
   const { latebdreceived, latebdsay, bomdia, bdiasvar, pontosvar } = bddata;
-  // if (!moment().isBetween(STime, ETime, 'minute', '[]')) {
   const replyTo = tweet.in_reply_to_screen_name; // Who is this in reply to?
   const name = tweet.user.screen_name; // Who sent the tweet?
   const txt = tweet.text;// What is the text?
@@ -716,13 +726,13 @@ function tweetReply(tweet) {
 
 // checa se a frase de bom dia recebido já existe no banco
 function checkBdData(path, newBomDia, origem) {
-  // console.log(newBomDia, origem);
   let existe;
   if (origem === 'gif') {
     existe = gifdata.ckdgif.findIndex(elem => elem === newBomDia);
   } else {
     existe = path.findIndex(elem => elem === newBomDia);
   }
+
   // Adiciona bom dia no banco de bom dias
   if (existe === -1 && origem === 'gif') {
     path.push(newBomDia);
@@ -734,10 +744,10 @@ function checkBdData(path, newBomDia, origem) {
     console.log(`Novo bom dia recebido: ${newBdiaCount} -> ${newBomDia}`);
   }
   if (newBdiaCount >= 10) {
-    saveNewdata(bddata);
+    saveNewdata('bd', bddata);
     newBdiaCount = 0;
   } else if (newgifCount >= 10) {
-    saveNewdata(gifdata);
+    saveNewdata('gif', gifdata);
     newgifCount = 0;
   }
 }
@@ -752,15 +762,14 @@ function checkBdvData(newbdvalue) {
     newBdiaCount += 1;
   }
   if (newBdiaCount > 10) {
-    saveNewdata(bddata);
+    saveNewdata('bd', bddata);
     newBdiaCount = 0;
   }
 }
 
 // sava arquivo json com bom dias no dropbox a cada 10 novos
-function saveNewdata(dataVar) {
-  const filename = Object.keys(dataVar).length > 6 ? '/data.json' : '/gifdata.json';
-  console.log(filename);
+function saveNewdata(id, dataVar) {
+  const filename = `/${id}data.json`;
   const json = JSON.stringify(dataVar, null, 2);
   dbx.filesUpload({ path: filename, contents: json, mode: 'overwrite' })
     .then((response) => {
