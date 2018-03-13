@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "postinstall": "babel src -d dist",
-    "test": "babel-node ./src/index.js"
+    "start": "babel-node ./src/index.js"
   },
   "repository": {
     "type": "git",

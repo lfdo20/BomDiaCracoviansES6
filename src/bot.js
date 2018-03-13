@@ -22,7 +22,8 @@ let bddata = {},
   newgifCount = 0,
   rgifcount = 0,
   bdiadaycount = [[], [0, 0], 0, 0],
-  nvloop = 0;
+  nvloop = 0,
+  silentUsers;
 
 const dropfilesurl = [[process.env.DROP_DATA, 'bddata.json', 'bddata'],
   [process.env.DROP_GIF, 'gifdata.json', 'gifdata'],
@@ -96,6 +97,7 @@ function startRead() {
           gifdata = JSON.parse(fs.readFileSync('./gifdata.json', 'utf8'));
         } else if (id[2] === 'nvdata') {
           bdiadaycount = JSON.parse(fs.readFileSync('./nvdata.json', 'utf8'));
+          silentUsers = bdiadaycount[4];
         }
       }).catch((err) => {
         throw err;
@@ -477,14 +479,14 @@ bot.onText(/(.)?/gi, (msg) => {
     bot.sendMessage(msg.chat.id, nvlog(timeS.diff(bdiadaycount[1][1], 'minute')));
   }
 
-  if (bdiadaycount[0].length > 0) {
+  const validDate = moment.unix(msg.date).isAfter(bdiadaycount[3], 'hours');
+  if (bdiadaycount[0].length > 0 && validDate) {
     bdiadaycount[1][0] = Math.ceil(18 / (bdiadaycount[0].length + 1));
     const timeS = moment.unix(msg.date);
 
     if (bdiadaycount[1][1] === 0) {
       bdiadaycount[2] = bdiadaycount[0][0];
       bdiadaycount[1][1] = moment.unix(msg.date);
-      bdiadaycount[3] = Math.ceil(bdiadaycount[0].length / 2);
     }
 
     const faltam = timeS.isAfter(bdiadaycount[1][1], 'minute');
@@ -497,19 +499,19 @@ bot.onText(/(.)?/gi, (msg) => {
 
     if (faltam) {
       bdiadaycount[2] -= 1;
-      if (bdiadaycount[2] <= 0 && bdiadaycount[3] >= 0) {
-        console.log('Validar Crescente fim: ', bdiadaycount[3]);
+      const checkUser = silentUsers.findIndex(user => user === msg.from.username);
+
+      if (bdiadaycount[2] <= 0 && checkUser === -1) {
         bot.sendMessage(msg.chat.id, `Não @${msg.from.username}, nada mais para validar  ...`);
-        bdiadaycount[3] -= 1;
-      } else if (bdiadaycount[3] <= 0) {
         bdiadaycount[0].shift();
         bdiadaycount[2] = bdiadaycount[0][0];
-        bdiadaycount[3] = Math.ceil(bdiadaycount[0].length / 2);
         bdiadaycount[1][1] = moment.unix(msg.date).add(bdiadaycount[1][0], 'h');
         saveNewdata('nv', bdiadaycount);
-        nvlog(faltam);
+        console.log(nvlog(faltam));
       }
     }
+  } else if (bdiadaycount[0].length <= 0) {
+    bdiadaycount[1][2] = true;
   }
 
   // verificador de duplicados
@@ -678,11 +680,19 @@ Nada de marcar pessoas e botar o meu na reta.`;
   }
 
   bot.sendMessage(msg.chat.id, bdiaback).then(() => {
-    if (msg.text.length > 15 && bdiadaycount[0].length <= 5) {
+    const validDate = moment().isAfter(bdiadaycount[3], 'hours');
+    const validQuantity = msg.text.length > 20 && bdiadaycount[0].length <= 5;
+
+    if (validQuantity && validDate && bdiadaycount[1][2] === true) {
       bdiadaycount[0].push(msg.text.length);
-      console.log(bdiadaycount[0]);
       saveNewdata('nv', bdiadaycount);
+    } else if (bdiadaycount[0].length === 5) {
+      const daysArray = Array.from(bdiadaycount[0]);
+      const medium = Math.floor(daysArray.reduce((acc, val) => acc + val) / daysArray.length);
+      bdiadaycount[3] = moment.unix(msg.date).add(medium, 'hours');
+      bdiadaycount[1][2] = false;
     }
+
     if (bdiaback !== undefined) {
       newTwit(bdiaback);
     }
