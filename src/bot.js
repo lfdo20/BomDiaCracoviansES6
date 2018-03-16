@@ -39,7 +39,7 @@ let gifdata = {
 
 // Time config
 const nowDay = () => moment().format('ddd');
-const STime = () => moment('22:00', 'HHmm'); // 14:00
+const STime = () => moment('14:00', 'HHmm'); // 14:00
 const ETime = () => moment('23:59', 'HHmm'); // 23:59
 
 // Dropbox Config
@@ -227,7 +227,7 @@ bot.on('document', (msg) => {
   }
 });
 
-// função para lembrar que vai começar a putaria
+// função para lembrar que vai acabar a putaria
 let endputsaid = 0;
 function putariaRemenber(msg, faltam) {
   if (faltam <= 60 && endputsaid === 0) {
@@ -403,6 +403,54 @@ bot.onText(/^\/bdccheck(\s)(\d+)$/, (msg, match) => {
   newgfcheck(msg);
 });
 
+// Dialogo interno do bot
+const badValues = ['tomar no cu', 'no seu cu', 'se fuder', 'foda-se', 'otário', 'te dar um soco', 'mão na sua cara'];
+const badReturns = ['QUE', 'vai você!', 'pra q isso ?', 'tem que acabar Humanos!',
+  'vou deixar essa malcriação aqui no meu array ...', 'vou acionar o Direitos Robóticos'];
+const goodValues = ['fofo', 'te amo', 'lindo'];
+const neutralReturns = ['QUE', 'tem certeza disso?', 'tudo bem Humano', 'só um minuto..'];
+const goodReturns = ['te amo bb', 'SHOW!', 'estou emocionado..'];
+// pre = match[1];
+// post = match[3];
+bot.onText(/^(.+)?(@bomdiacracobot)(.+)?$/, (msg, match) => {
+  let emotion, rand, msgBack;
+  function emotionCheck(value, emoString) {
+    if ((match[3] !== undefined && match[3].includes(value) === true) ||
+      (match[1] !== undefined && match[1].includes(value) === true)) {
+      emotion = emoString;
+    }
+  }
+
+  if (match[2] === '@bomdiacracobot') {
+    badValues.forEach(value => emotionCheck(value, 'bad'));
+    goodValues.forEach(value => emotionCheck(value, 'good'));
+    console.log(emotion);
+
+    // let emotion = badValues.includes(post) === true ? 'bad' :
+    // (postGoodValues.includes(post) === true ? 'good' : 'neutral');
+
+    switch (emotion) {
+      case 'bad':
+        rand = Math.floor(Math.random() * badReturns.length);
+        msgBack = badReturns[rand];
+        break;
+
+      case 'good':
+        rand = Math.floor(Math.random() * goodReturns.length);
+        msgBack = goodReturns[rand];
+        break;
+
+      default:
+        rand = Math.floor(Math.random() * neutralReturns.length);
+        msgBack = neutralReturns[rand];
+        break;
+    }
+
+
+    bot.sendMessage(msg.chat.id, msgBack, { reply_to_message_id: msg.message_id }).then(() => { });
+  }
+});
+
 // comando para analisar várias mensagens recebidas e distribuir as funções
 let putexec = false,
   putstartcheck = false,
@@ -471,7 +519,7 @@ bot.onText(/(.)?/gi, (msg) => {
     Validar Intervalo: ${bdiadaycount[1]}
     Validar Regressiva: ${bdiadaycount[2]}
     Minutos para liberar: ${faltam}
-    Validações restantes: ${bdiadaycount[3]}
+    Próxima Data: ${bdiadaycount[3]}
   `;
 
   if (msg.text.toString().toLowerCase() === 'bdcnv') {
