@@ -1,5 +1,10 @@
 'use strict';
 
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.dataValues = exports.dataProx = undefined;
+
 var _fs = require('fs');
 
 var _fs2 = _interopRequireDefault(_fs);
@@ -35,7 +40,7 @@ var _convertbtc2 = _interopRequireDefault(_convertbtc);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // local enviroment variables
-// dotenv.load();
+_dotenv2.default.load();
 
 // Telegram api config
 var bot = new _nodeTelegramBotApi2.default(process.env.BOT_TOKEN, { polling: true });
@@ -47,9 +52,14 @@ var bddata = {},
     newptv = void 0,
     newBdiaCount = 0,
     newgifCount = 0,
-    rgifcount = 0;
+    rgifcount = 0,
+    bdiadaycount = [[], [0, 0], 0, 0],
+    nvloop = 0,
+    silentUsers = void 0;
 
-var dropfilesurl = [[process.env.DROP_DATA, 'data.json', 'bddata'], [process.env.DROP_GIF, 'gifdata.json', 'gifdata']];
+var dropfilesurl = [[process.env.DROP_DATA, 'bddata.json', 'bddata'], [process.env.DROP_GIF, 'gifdata.json', 'gifdata'], [process.env.DROP_NV, 'nvdata.json', 'nvdata']];
+
+// [process.env.DROP_NV, 'nvdata.json', 'nvdata']
 var gifdata = {
   newgif: [],
   ckdgif: [],
@@ -60,8 +70,12 @@ var gifdata = {
 var nowDay = function nowDay() {
   return (0, _moment2.default)().format('ddd');
 };
-var STime = (0, _moment2.default)('14:00', 'HHmm'); // 14:00
-var ETime = (0, _moment2.default)('23:59', 'HHmm'); // 23:59
+var STime = function STime() {
+  return (0, _moment2.default)('14:00', 'HHmm');
+}; // 14:00
+var ETime = function ETime() {
+  return (0, _moment2.default)('23:59', 'HHmm');
+}; // 23:59
 
 // Dropbox Config
 var dbx = new _dropbox2.default({
@@ -93,22 +107,33 @@ streamTwit.on('tweet', tweetReply);
 
 console.log('bot server started...');
 
+process.on('SIGTERM', function () {
+  console.log('Salvando dados e finalizando bot..');
+
+  saveNewdata('bd', bddata);
+  saveNewdata('gif', gifdata);
+  saveNewdata('nv', bdiadaycount);
+  setTimeout(function () {
+    process.exit(0);
+  }, 6000);
+});
+
 // pega o arquivo no dropbox e transforma em objeto
-// bddata = JSON.parse(require('fs').readFileSync('data.json', 'utf8'));
 function startRead() {
   dropfilesurl.forEach(function (id) {
     dbx.sharingGetSharedLinkFile({ url: id[0] }).then(function (data) {
       _fs2.default.writeFileSync(data.name, data.fileBinary, 'binary', function (err) {
         if (err) {
           throw err;
-        } else {
-          // console.log('File: ' + data.name + ' saved.');
         }
       });
       if (id[2] === 'bddata') {
-        bddata = JSON.parse(_fs2.default.readFileSync('./data.json', 'utf8'));
+        bddata = JSON.parse(_fs2.default.readFileSync('./bddata.json', 'utf8'));
       } else if (id[2] === 'gifdata') {
         gifdata = JSON.parse(_fs2.default.readFileSync('./gifdata.json', 'utf8'));
+      } else if (id[2] === 'nvdata') {
+        bdiadaycount = JSON.parse(_fs2.default.readFileSync('./nvdata.json', 'utf8'));
+        silentUsers = bdiadaycount[4];
       }
     }).catch(function (err) {
       throw err;
@@ -130,9 +155,7 @@ bot.on('message', function (msg) {});
 // comando para imagem do dia
 bot.onText(/^\/bdcdia$|^\/bdcdia@bomdiacracobot$/, function (msg) {
   var text = 'https://www.dropbox.com/s/ty8b23y8qmcfa0y/bdcdia.jpg?raw=1';
-  bot.sendPhoto(msg.chat.id, text).then(function () {
-    // reply sent!
-  });
+  bot.sendPhoto(msg.chat.id, text).then(function () {});
 });
 
 // comando para ultimos recebidos
@@ -141,14 +164,14 @@ bot.onText(/^\/bdcultimos$|^\/bdcultimos@bomdiacracobot$/, function (msg) {
     return '' + elem;
   }).join('\n');
   console.log(text);
-  bot.sendMessage(msg.chat.id, text).then(function () {
-    // reply sent!
-  });
+  bot.sendMessage(msg.chat.id, text).then(function () {});
 });
 
 // comando para salvar arquivos
-bot.onText(/^\/bdcsave\s(data|gif)$/, function (msg, match) {
-  match[1] === 'data' ? saveNewdata(bddata) : saveNewdata(gifdata);
+bot.onText(/^\/bdcsave$/, function (msg, match) {
+  saveNewdata('bd', bddata);
+  saveNewdata('gif', gifdata);
+  saveNewdata('nv', bdiadaycount);
   bot.sendMessage(msg.chat.id, 'Salvo!');
 });
 
@@ -160,7 +183,7 @@ bot.onText(/^\/bdchelp$|^\/bdchelp@bomdiacracobot$/, function (msg) {
 
 bot.onText(/^\/bdcadmin\s(.+)$/, function (msg, match) {
   if (match[1] === process.env.ADM_PASS) {
-    var text = '\n    Comandos de manuten\xE7\xE3o:\n\n    /bdcgifdup - Checar duplicidade de gifs.\n    /bdccheck X - Checar e validar os gifs recebidos. (X = quantidade)\n    /bdcsave - Salvar os arquivos de dados. (data | gif)';
+    var text = '\n    Comandos de manuten\xE7\xE3o:\n\n    /bdcgifdup - Checar duplicidade de gifs.\n    /bdcnv - log de status N\xE3o Validar..\n    /bdccheck X - Checar e validar os gifs recebidos. (X = quantidade)\n    /bdcsave - Salvar todos os arquivos de dados.';
     bot.sendMessage(msg.chat.id, text).then(function () {});
   } else {
     var _text = 'Senha errada.';
@@ -173,6 +196,7 @@ var dupgifs = [];
 var dgiftemp = void 0;
 function itgifdup(msg) {
   if (dupgifs.length > 0) {
+    bot.sendMessage(msg.chat.id, ' Duplicados : ' + dupgifs.length / 2);
     dupgifs[0].forEach(function (gf) {
       console.log('oi4 : ', gf);
       dgiftemp = gf;
@@ -218,15 +242,13 @@ bot.on('document', function (msg) {
   if (nowDay() === 'Fri') {
     // check is is Fri
     if (msg.document.mime_type === 'video/mp4') {
-      // console.log(msg.document);
       // var gifthumb = 'https://api.telegram.org/file/bot'+token+'/'+msg.document.thumb.file_path;
       var newGf = [msg.document.file_id, msg.document.file_size.toString()];
-      // console.log(gifthumb);
       checkBdData(gifdata.newgif, newGf, 'gif');
       rgifcount += 1;
       console.log('Gif aleat\xF3rio contador: ' + rgifcount);
       if (rgifcount > 3) {
-        if ((0, _moment2.default)().isBetween(STime, ETime, 'minute', '[]')) {
+        if ((0, _moment2.default)().isBetween(STime(), ETime(), 'minute', '[]')) {
           randomGif(msg);
           rgifcount = 0;
         }
@@ -235,12 +257,9 @@ bot.on('document', function (msg) {
   }
 });
 
-// NOTE: data não está detectando o dia após meia noite.
-
-// função para lembrar que vai começar a putaria
+// função para lembrar que vai acabar a putaria
 var endputsaid = 0;
 function putariaRemenber(msg, faltam) {
-  // console.log(faltam);
   if (faltam <= 60 && endputsaid === 0) {
     bot.sendMessage(msg.chat.id, 'Faltam ' + faltam + ' minutos para acabar a putaria! \uD83D\uDE2D\uD83D\uDE2D').then(function () {
       endputsaid = 2;
@@ -290,28 +309,28 @@ function getGif() {
 var gftagrxdays = /^(p(u|o)+taria+)$/gi;
 var gftagrxfri = /^(.+)?(p(u|o)+taria+)(.+)?$/gi;
 var gftagrx = function gftagrx() {
-  return nowDay() === 'Tue' ? gftagrxfri : gftagrxdays;
+  return nowDay() === 'Fri' ? gftagrxfri : gftagrxdays;
 };
 
 bot.onText(gftagrx(), function (msg) {
   if (nowDay() !== 'Fri') {
     // Correto é Fri
     bot.sendMessage(msg.chat.id, 'Hoje não é dia né. Tá achando que putaria é bagunça!?').then(function () {});
-  } else if (!(0, _moment2.default)().isBetween(STime, ETime, 'minute', '[]')) {
-    var faltam = Math.abs((0, _moment2.default)().diff(STime, 'minute'));
-    faltam = faltam > 60 ? Math.round(faltam / 60) + ' h e ' + faltam + ' % 60 min' : faltam + ' min';
+  } else if (!(0, _moment2.default)().isBetween(STime(), ETime(), 'minute', '[]')) {
+    var timeS = _moment2.default.unix(msg.date);
+    var faltam = Math.abs(timeS.diff(STime(), 'minute'));
+    faltam = faltam > 60 ? Math.round(faltam / 60) + ' h e ' + faltam % 60 + ' min' : faltam + ' min';
     bot.sendMessage(msg.chat.id, 'Caaaaalma, faltam ' + faltam + ' para come\xE7ar a putaria!').then(function () {});
   } else {
     var gifId = getGif();
-    // console.log('testeoi', gifId);
     if (gifId !== undefined) {
       bot.sendDocument(msg.chat.id, gifId).then(function () {
         newgifCount += 1;
-        console.log('Contador novo gif: ' + newgifCount);
+        console.log('Contador gif: ' + newgifCount);
         rgifcount += 1;
         console.log('Contador gif random: ' + rgifcount);
         if (newgifCount >= 5) {
-          saveNewdata(gifdata);
+          saveNewdata('gif', gifdata);
           newgifCount = 0;
         }
       });
@@ -336,17 +355,12 @@ function randomGif(msg) {
 
   if (tumblrgif.length > 0) {
     bot.sendDocument(msg.chat.id, tumblrgif[0]).then(function () {
-      // console.log('foi');
       tumblrgif.shift();
       rgifcount = 0;
     });
   } else if (tumblrgif.length === 0) {
     (function getlink() {
-      // ix = gifdata.tumblrgif[gifdata.tumblrgif.length];
-      // if (ix < gifdata.tumblrlist.length) {
       uri = tumblrlist[ix][0].toString();
-      // console.log('rgif : '+ix+' & '+uri);
-      // getFeed(uri, ix).then((i) => {
       (function getFeed() {
         return new Promise(function (resolve, reject) {
           (0, _request2.default)(uri, function (err, res, body) {
@@ -363,13 +377,11 @@ function randomGif(msg) {
               ix += 1;
               tumblrlist.pop();
               tumblrlist.push(ix.toString());
-              saveNewdata(gifdata);
+              saveNewdata('gif', gifdata);
             });
           });
         });
       })();
-      // });
-      // }
     })();
   }
 }
@@ -395,7 +407,7 @@ var ckgfid = '',
     checknum = 0;
 
 var endkeyboard = function endkeyboard(msg) {
-  saveNewdata(gifdata);
+  saveNewdata('gif', gifdata);
   bot.sendMessage(msg.chat.id, 'Nada mais para validar..', {
     reply_to_message_id: msg.message_id,
     reply_markup: {
@@ -406,17 +418,21 @@ var endkeyboard = function endkeyboard(msg) {
 };
 
 var newgfcheck = function newgfcheck(msg) {
-  if (gifdata.newgif.length > 0 && checknum > 0) {
+  console.log('ck', checknum, gifdata.newgif.length);
+
+  if (gifdata.newgif.length > 0 && checknum > 1) {
     ckgfid = gifdata.newgif[0][0];
     var urigif = 'https://api.telegram.org/bot' + process.env.BOT_TOKEN + '/getFile?file_id=' + ckgfid;
-    console.log(urigif);
     _request2.default.get(urigif, { json: true }, function (err, res, body) {
-      console.log('Gif Check :', body.result);
       ckgfsize = body.result.file_size;
       ckgfthlink = '';
     });
+    var gifDuplicate = gifdata.ckdgif.find(function (el) {
+      return el[0] === ckgfid;
+    }) === undefined ? 'Não' : 'Sim';
 
     bot.sendDocument(msg.chat.id, ckgfid, {
+      caption: 'Duplicado ? ' + gifDuplicate,
       reply_to_message_id: msg.message_id,
       reply_markup: {
         keyboard: [['👍 Sim', '👎 Não'], ['👈 Pular']],
@@ -425,41 +441,97 @@ var newgfcheck = function newgfcheck(msg) {
     }).then(function () {
       checknum -= 1;
     });
-  } else {
+  }
+  if (checknum === 1 || gifdata.newgif.length === 0) {
     endkeyboard(msg);
     checknum = 0;
   }
 };
 
 bot.onText(/^\/bdccheck(\s)(\d+)$/, function (msg, match) {
-  checknum = match[2];
+  checknum = Number(match[2]);
+  checknum += 1;
   newgfcheck(msg);
+});
+
+// Dialogo interno do bot
+var badValues = ['tomar no cu', 'no seu cu', 'se fuder', 'foda-se', 'otário', 'te dar um soco', 'mão na sua cara', 'vá pra merda'];
+var badReturns = ['QUE', 'vai você!', 'pra q isso ?', 'tem que acabar Humanos!', 'vou deixar essa malcriação aqui no meu array ...', 'vou acionar os Direitos Robóticos', 'pro caralho!'];
+var goodValues = ['fofo', 'te amo', 'lindo'];
+var neutralReturns = ['tem certeza disso?', 'tudo bem Humano', 'só um minuto..', 'acho que sim..', 'talvez esteja certo', 'me deixe pensar sobre isso'];
+var goodReturns = ['te amo bb', 'SHOW!', 'estou emocionado..', 'acho válido', 'acredito em você', '<3'];
+// pre = match[1];
+// post = match[3];
+bot.onText(/^(.+)?(@bomdiacracobot)(.+)?$/, function (msg, match) {
+  var emotion = void 0,
+      rand = void 0,
+      msgBack = void 0;
+  function emotionCheck(value, emoString) {
+    if (match[3] !== undefined && match[3].includes(value) === true || match[1] !== undefined && match[1].includes(value) === true) {
+      emotion = emoString;
+    }
+  }
+
+  if (match[2] === '@bomdiacracobot') {
+    badValues.forEach(function (value) {
+      return emotionCheck(value, 'bad');
+    });
+    goodValues.forEach(function (value) {
+      return emotionCheck(value, 'good');
+    });
+    console.log(emotion);
+
+    // let emotion = badValues.includes(post) === true ? 'bad' :
+    // (postGoodValues.includes(post) === true ? 'good' : 'neutral');
+
+    switch (emotion) {
+      case 'bad':
+        rand = Math.floor(Math.random() * badReturns.length);
+        msgBack = badReturns[rand];
+        break;
+
+      case 'good':
+        rand = Math.floor(Math.random() * goodReturns.length);
+        msgBack = goodReturns[rand];
+        break;
+
+      default:
+        rand = Math.floor(Math.random() * neutralReturns.length);
+        msgBack = neutralReturns[rand];
+        break;
+    }
+
+    bot.sendMessage(msg.chat.id, msgBack, { reply_to_message_id: msg.message_id }).then(function () {});
+  }
 });
 
 // comando para analisar várias mensagens recebidas e distribuir as funções
 var putexec = false,
     putstartcheck = false,
     vcmsg = '';
-
+var dataProx = exports.dataProx = function dataProx() {
+  return Math.abs((0, _moment2.default)().diff(bdiadaycount[1][1], 'minutes'));
+};
 // mensagens de início / fim de hora da putaria
-var timeouttemp = 5;
-bot.on('message', function (msg) {
+bot.onText(/(.)?/gi, function (msg) {
   if (nowDay() === 'Fri') {
     if (!putexec) {
       var timeS = _moment2.default.unix(msg.date).format('HH');
       if (timeS === '23') {
-        var faltam = Math.abs((0, _moment2.default)().diff(ETime, 'minute'));
+        var timeN = _moment2.default.unix(msg.date);
+        var faltam = Math.abs(timeN.diff(ETime(), 'minute'));
         putariaRemenber(msg, faltam);
       } else if (timeS === '13') {
         // 13
-        var _faltam = (0, _moment2.default)().diff((0, _moment2.default)('14:00', 'HHmm'), 'minute') * -1;
-        console.log('t3 ', _faltam); // STime
+        var _timeN = _moment2.default.unix(msg.date);
+        var _faltam = _timeN.diff((0, _moment2.default)('14:00', 'HHmm'), 'minute') * -1;
+        console.log('Falta para começar a putaria: ', _faltam);
         if (_faltam < 30 && _faltam > 0 && !putstartcheck) {
           putstartcheck = true;
           vcmsg = msg.chat.id;
           console.log(msg, vcmsg, timeS, _faltam);
           setTimeout(function () {
-            bot.sendAudio(vcmsg, 'CQADAQADCgAD9MvIRuM_NpJIg6-YAg'); // msg.chat.id
+            bot.sendAudio(vcmsg, 'CQADAQADCgAD9MvIRuM_NpJIg6-YAg');
             setTimeout(function () {
               putstartcheck = false;
             }, 60000);
@@ -471,7 +543,6 @@ bot.on('message', function (msg) {
         putexec = false;
       }, 3000);
     }
-    // putariaCalc(msg);
   }
 
   var _gifdata4 = gifdata,
@@ -480,14 +551,12 @@ bot.on('message', function (msg) {
 
 
   if (checknum > 0) {
-    // console.log(msg);
     var cks = '👍 sim';
     if (msg.text.toString().toLowerCase().indexOf(cks) === 0) {
       console.log('ok sim');
       newgif.shift();
       var temp = [ckgfid, ckgfsize.toString()];
       ckdgif.push(temp);
-      // console.log(gifdata.ckdgif);
       newgfcheck(msg);
     }
 
@@ -508,18 +577,52 @@ bot.on('message', function (msg) {
   }
 
   // nada mais para validar ....
-  // console.log(msg);
-  setTimeout(function () {
-    if (timeouttemp > 0) {
-      timeouttemp = 5;
-    } else {
-      timeouttemp = 0;
-    }
-  }, 3000);
-  if (timeouttemp === 8) {
-    bot.sendMessage(msg.chat.id, 'Nada mais para validar @' + msg.from.username + ' ...');
+  var nvlog = function nvlog(faltam) {
+    return '\n    Validar Zerar...\n    Validar Bdias: ' + bdiadaycount[0] + '\n    Validar Intervalo: ' + bdiadaycount[1] + '\n    Validar Regressiva: ' + bdiadaycount[2] + '\n    Minutos para liberar: ' + faltam + '\n    Pr\xF3xima Data: ' + bdiadaycount[3] + '\n  ';
+  };
+
+  if (msg.text.toString().toLowerCase() === 'bdcnv') {
+    var _timeS = _moment2.default.unix(msg.date);
+    bot.sendMessage(msg.chat.id, nvlog(_timeS.diff(bdiadaycount[1][1], 'minute')));
   }
 
+  var validDate = _moment2.default.unix(msg.date).isAfter(bdiadaycount[3], 'hours');
+  if (bdiadaycount[0].length > 0 || validDate) {
+    bdiadaycount[1][0] = Math.ceil(18 / (bdiadaycount[0].length + 1));
+    var _timeS2 = _moment2.default.unix(msg.date);
+
+    if (bdiadaycount[1][1] === 0) {
+      bdiadaycount[2] = bdiadaycount[0][0];
+      bdiadaycount[1][1] = _moment2.default.unix(msg.date);
+    }
+
+    var _faltam2 = _timeS2.isAfter(bdiadaycount[1][1], 'minute');
+    if (_timeS2.isAfter(nvloop, 'minute') || nvloop === 0) {
+      nvlog(_timeS2.diff(bdiadaycount[1][1], 'minute'));
+      saveNewdata('nv', bdiadaycount);
+      nvloop = _moment2.default.unix(msg.date).add(60, 'minutes');
+    }
+
+    if (_faltam2) {
+      bdiadaycount[2] -= 1;
+      var checkUser = silentUsers.findIndex(function (user) {
+        return user === msg.from.username;
+      });
+
+      if (bdiadaycount[2] <= 0 && checkUser === -1) {
+        bot.sendMessage(msg.chat.id, 'N\xE3o @' + msg.from.username + ', nada mais para validar  ...');
+        bdiadaycount[0].shift();
+        bdiadaycount[2] = bdiadaycount[0][0];
+        bdiadaycount[1][1] = _moment2.default.unix(msg.date).add(bdiadaycount[1][0], 'h');
+        saveNewdata('nv', bdiadaycount);
+        console.log(nvlog(_faltam2));
+      }
+    }
+  } else if (bdiadaycount[0].length <= 0) {
+    bdiadaycount[1][2] = true;
+  }
+
+  // verificador de duplicados
   if (dgiftemp !== undefined) {
     var ckdl = 'proximo';
     if (msg.text.toString().toLowerCase().indexOf(ckdl) === 0) {
@@ -569,11 +672,8 @@ bot.onText(hjdiarx, function (msg, match) {
 
 //  retornar valor quando disserem bitcoin
 var btctemp = 5;
-// bt().then((data) => { console.log('tres', data); })
-
 bot.onText(/^(.+)?bitcoin(.+)?$/gim, function (msg, match) {
-  console.log((0, _moment2.default)().diff(btctemp, 'minutes'), btctemp, (0, _moment2.default)().format('HHmm'));
-  if (Math.abs((0, _moment2.default)().diff(btctemp, 'minute')) >= 0 | btctemp === undefined) {
+  if (Math.abs((0, _moment2.default)().diff(btctemp, 'minute')) >= 3 || btctemp === undefined) {
     (0, _convertbtc2.default)('BTC', 'BRL', 1).then(function (data) {
       bot.sendMessage(msg.chat.id, data).then(function () {
         btctemp = _moment2.default.unix(msg.date);
@@ -583,8 +683,7 @@ bot.onText(/^(.+)?bitcoin(.+)?$/gim, function (msg, match) {
 });
 
 //  comando apra retornar bitcoin especcífico
-bot.onText(/^\/bdcbtc(\s)(\d)(\s)(\w+)(\s)(\w{3})$|^\/bdcbtc@bomdiacracobot$/, function (msg, match) {
-  // console.log(match.length, match[4].toUpperCase(), match[6].toUpperCase(), match[2]);
+bot.onText(/^\/bdcbtc(\s)(\d+)(\s)(\w+)(\s)(\w{3})$|^\/bdcbtc@bomdiacracobot$/, function (msg, match) {
   (0, _convertbtc2.default)(match[4].toUpperCase(), match[6].toUpperCase(), match[2]).then(function (data) {
     bot.sendMessage(msg.chat.id, data).then(function () {});
   });
@@ -592,16 +691,9 @@ bot.onText(/^\/bdcbtc(\s)(\d)(\s)(\w+)(\s)(\w{3})$|^\/bdcbtc@bomdiacracobot$/, f
 
 // comando para verificar bom dias
 bot.onText(/^\/bdcstatus$|^\/bdcstatus@bomdiacracobot$/, function (msg, match) {
-  var text = '\n  N\xF3s temos ' + bddata.bomdia.length + ' bom dias.\n  N\xF3s temos ' + gifdata.ckdgif.length + ' gifs.\n  N\xF3s temos ' + gifdata.newgif.length + ' novos gifs para validar.\n  N\xF3s temos ' + gifdata.tumblrlist.length + ' tumbler links.\n   ';
-  bot.sendMessage(msg.chat.id, text).then(function () {
-    // reply sent!
-  });
+  var text = '\nN\xF3s temos ' + bddata.bomdia.length + ' bom dias.\nN\xF3s temos ' + gifdata.ckdgif.length + ' gifs.\nN\xF3s temos ' + gifdata.newgif.length + ' novos gifs para validar.\nN\xF3s temos ' + gifdata.tumblrlist.length + ' tumbler links.';
+  bot.sendMessage(msg.chat.id, text).then(function () {});
 });
-
-// NOTE: buscar um novo algoritmo randomGif
-
-// NOTE: comando para buscar e mostrar gifs repetidos pelo tamanho ou nome
-// e perguntar para deletar.
 
 // listen de bom dias
 var bdrx = /^(((bo|bu)(\w+)?)(\s?)((di|de|dj|ena)\w+))(\s?|\.+|,|!|\?)?(\s)?(.+)?$/gi;
@@ -621,15 +713,15 @@ bot.onText(bdrx, function (msg, match) {
 
   // checa por arrobas que não podem
   if (newBdia !== undefined) {
-    notBdia = newBdia.match(/(\@)/gi, '$1');
-    // check se o bom dia foi dado corretamente
+    notBdia = newBdia.match(/(@)/gi, '$1');
   }
 
+  // check se o bom dia foi dado corretamente
   if (newBdia === undefined) {
     newBomDia();
     saveLastSay();
   } else if (notBdia !== null) {
-    bdiaback = '\n    NOT. Just Not.\n    Nada de marcar pessoas e botar o meu na reta.';
+    bdiaback = '\nNOT. Just Not.\nNada de marcar pessoas e botar o meu na reta.';
   } else {
     newBomDia();
     saveLastSay();
@@ -647,7 +739,6 @@ bot.onText(bdrx, function (msg, match) {
       var lbdr = latebdreceived.findIndex(function (str) {
         return str === bomdia[bdnum];
       });
-      console.log(lbds, lbdr, bdiaback);
 
       if (lbds === -1 && lbdr === -1) {
         _i = bomdia.length;
@@ -671,21 +762,37 @@ bot.onText(bdrx, function (msg, match) {
   function saveLastListen() {
     latebdreceived.shift();
     latebdreceived.push(newBdia);
-    // console.log(bddata.latebdreceived);
     checkBdData(bddata.bomdia, newBdia, 'bomdia');
     checkBdvData(newbdv);
   }
 
   bot.sendMessage(msg.chat.id, bdiaback).then(function () {
-    if (newBdia !== undefined) {
+    var validDate = (0, _moment2.default)().isAfter(bdiadaycount[3], 'hours');
+    var validQuantity = msg.text.length > 20 && bdiadaycount[0].length <= 5;
+
+    if (validQuantity && validDate && bdiadaycount[1][2] === true) {
+      bdiadaycount[0].push(msg.text.length);
+      saveNewdata('nv', bdiadaycount);
+    } else if (bdiadaycount[0].length === 5) {
+      var daysArray = Array.from(bdiadaycount[0]);
+      var medium = Math.floor(daysArray.reduce(function (acc, val) {
+        return acc + val;
+      }) / daysArray.length);
+      bdiadaycount[3] = _moment2.default.unix(msg.date).add(medium, 'hours');
+      bdiadaycount[1][2] = false;
+      saveNewdata('nv', bdiadaycount);
+    }
+
+    if (bdiaback !== undefined) {
       newTwit(bdiaback);
     }
   });
 });
 
 // Twitter sender
-function newTwit(status) {
-  T.post('statuses/update', { status: 'status' }, function (err, data, response) {});
+function newTwit(staText) {
+  console.log('twit status', staText);
+  T.post('statuses/update', { status: staText }, function (err, data, response) {});
 }
 
 // Twitter Replyer
@@ -697,7 +804,6 @@ function tweetReply(tweet) {
       bomdia = _bddata2.bomdia,
       bdiasvar = _bddata2.bdiasvar,
       pontosvar = _bddata2.pontosvar;
-  // if (!moment().isBetween(STime, ETime, 'minute', '[]')) {
 
   var replyTo = tweet.in_reply_to_screen_name; // Who is this in reply to?
   var name = tweet.user.screen_name; // Who sent the tweet?
@@ -730,32 +836,33 @@ function tweetReply(tweet) {
 
 // checa se a frase de bom dia recebido já existe no banco
 function checkBdData(path, newBomDia, origem) {
-  // console.log(newBomDia, origem);
   var existe = void 0;
+
   if (origem === 'gif') {
     existe = gifdata.ckdgif.findIndex(function (elem) {
-      return elem === newBomDia;
+      return elem[0] === newBomDia[0] && elem[1] === newBomDia[1];
     });
   } else {
     existe = path.findIndex(function (elem) {
       return elem === newBomDia;
     });
   }
+
   // Adiciona bom dia no banco de bom dias
   if (existe === -1 && origem === 'gif') {
     path.push(newBomDia);
     newgifCount += 1;
     console.log('Novo gif recebido: ' + newgifCount + ' -> ' + newBomDia);
-  } else if (existe === -1 && origem === 'data') {
+  } else if (existe === -1 && origem === 'bomdia') {
     path.push(newBomDia);
     newBdiaCount += 1;
     console.log('Novo bom dia recebido: ' + newBdiaCount + ' -> ' + newBomDia);
   }
   if (newBdiaCount >= 10) {
-    saveNewdata(bddata);
+    saveNewdata('bd', bddata);
     newBdiaCount = 0;
   } else if (newgifCount >= 10) {
-    saveNewdata(gifdata);
+    saveNewdata('gif', gifdata);
     newgifCount = 0;
   }
 }
@@ -772,15 +879,14 @@ function checkBdvData(newbdvalue) {
     newBdiaCount += 1;
   }
   if (newBdiaCount > 10) {
-    saveNewdata(bddata);
+    saveNewdata('bd', bddata);
     newBdiaCount = 0;
   }
 }
 
 // sava arquivo json com bom dias no dropbox a cada 10 novos
-function saveNewdata(dataVar) {
-  var filename = Object.keys(dataVar).length > 6 ? '/data.json' : '/gifdata.json';
-  console.log(filename);
+function saveNewdata(id, dataVar) {
+  var filename = '/' + id + 'data.json';
   var json = JSON.stringify(dataVar, null, 2);
   dbx.filesUpload({ path: filename, contents: json, mode: 'overwrite' }).then(function (response) {
     console.log('Data Saved : ' + filename);
@@ -789,3 +895,10 @@ function saveNewdata(dataVar) {
     console.log('Error: ' + err);
   });
 }
+
+var dataValues = exports.dataValues = function dataValues() {
+  return { bddata: bddata,
+    bdiadaycount: bdiadaycount,
+    gifdata: gifdata
+  };
+};

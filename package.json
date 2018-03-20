@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "postinstall": "babel src -d dist",
-    "start": "babel-node ./src/index.js"
+    "start": "babel-node ./src/index.js",
+    "build": "./node_modules/.bin/webpack --mode production --optimize-minimize",
+    "dev": "./node_modules/.bin/webpack --mode development",
+    "go": "npm run dev && npm run start"
   },
   "repository": {
     "type": "git",
@@ -20,6 +23,7 @@
   "author": "Leandro Fernandes lfdo <lfdo20@gmail.com> (https://lfdo20.github.io/lfdo)",
   "license": "MIT",
   "dependencies": {
+    "axios": "^0.18.0",
     "babel-cli": "^6.26.0",
     "babel-core": "^6.26.0",
     "babel-preset-env": "^1.6.1",
@@ -28,20 +32,31 @@
     "express": "^4.16.2",
     "moment": "^2.20.1",
     "node-telegram-bot-api": "^0.29.0",
+    "react": "^16.2.0",
+    "react-dom": "^16.2.0",
     "request": "^2.83.0",
     "twit": "^2.2.9"
   },
   "babel": {
     "presets": [
-      "env"
+      "env",
+      "react"
+    ],
+    "plugins": [
+      "transform-react-jsx"
     ]
   },
   "quokka": {
     "babel": false
   },
   "devDependencies": {
+    "babel-loader": "^7.1.4",
+    "babel-plugin-transform-react-jsx": "^6.24.1",
+    "babel-preset-react": "^6.24.1",
     "eslint": "^4.17.0",
     "eslint-config-airbnb-base": "^12.1.0",
-    "eslint-plugin-import": "^2.8.0"
+    "eslint-plugin-import": "^2.8.0",
+    "webpack": "^4.1.1",
+    "webpack-cli": "^2.0.12"
   }
 }

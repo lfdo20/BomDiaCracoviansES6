@@ -404,12 +404,12 @@ bot.onText(/^\/bdccheck(\s)(\d+)$/, (msg, match) => {
 });
 
 // Dialogo interno do bot
-const badValues = ['tomar no cu', 'no seu cu', 'se fuder', 'foda-se', 'otário', 'te dar um soco', 'mão na sua cara'];
+const badValues = ['tomar no cu', 'no seu cu', 'se fuder', 'foda-se', 'otário', 'te dar um soco', 'mão na sua cara', 'vá pra merda'];
 const badReturns = ['QUE', 'vai você!', 'pra q isso ?', 'tem que acabar Humanos!',
-  'vou deixar essa malcriação aqui no meu array ...', 'vou acionar o Direitos Robóticos'];
+  'vou deixar essa malcriação aqui no meu array ...', 'vou acionar os Direitos Robóticos', 'pro caralho!'];
 const goodValues = ['fofo', 'te amo', 'lindo'];
-const neutralReturns = ['QUE', 'tem certeza disso?', 'tudo bem Humano', 'só um minuto..'];
-const goodReturns = ['te amo bb', 'SHOW!', 'estou emocionado..'];
+const neutralReturns = ['tem certeza disso?', 'tudo bem Humano', 'só um minuto..', 'acho que sim..', 'talvez esteja certo', 'me deixe pensar sobre isso'];
+const goodReturns = ['te amo bb', 'SHOW!', 'estou emocionado..', 'acho válido', 'acredito em você', '<3'];
 // pre = match[1];
 // post = match[3];
 bot.onText(/^(.+)?(@bomdiacracobot)(.+)?$/, (msg, match) => {
@@ -455,7 +455,7 @@ bot.onText(/^(.+)?(@bomdiacracobot)(.+)?$/, (msg, match) => {
 let putexec = false,
   putstartcheck = false,
   vcmsg = '';
-
+export const dataProx = () => (Math.abs(moment().diff(bdiadaycount[1][1], 'minutes')));
 // mensagens de início / fim de hora da putaria
 bot.onText(/(.)?/gi, (msg) => {
   if (nowDay() === 'Fri') {
@@ -528,7 +528,7 @@ bot.onText(/(.)?/gi, (msg) => {
   }
 
   const validDate = moment.unix(msg.date).isAfter(bdiadaycount[3], 'hours');
-  if (bdiadaycount[0].length > 0 && validDate) {
+  if (bdiadaycount[0].length > 0 || validDate) {
     bdiadaycount[1][0] = Math.ceil(18 / (bdiadaycount[0].length + 1));
     const timeS = moment.unix(msg.date);
 
@@ -538,7 +538,6 @@ bot.onText(/(.)?/gi, (msg) => {
     }
 
     const faltam = timeS.isAfter(bdiadaycount[1][1], 'minute');
-
     if (timeS.isAfter(nvloop, 'minute') || nvloop === 0) {
       nvlog(timeS.diff(bdiadaycount[1][1], 'minute'));
       saveNewdata('nv', bdiadaycount);
@@ -739,6 +738,7 @@ Nada de marcar pessoas e botar o meu na reta.`;
       const medium = Math.floor(daysArray.reduce((acc, val) => acc + val) / daysArray.length);
       bdiadaycount[3] = moment.unix(msg.date).add(medium, 'hours');
       bdiadaycount[1][2] = false;
+      saveNewdata('nv', bdiadaycount);
     }
 
     if (bdiaback !== undefined) {
@@ -844,3 +844,8 @@ function saveNewdata(id, dataVar) {
       console.log(`Error: ${err}`);
     });
 }
+
+export const dataValues = () => ({ bddata,
+  bdiadaycount,
+  gifdata
+});
