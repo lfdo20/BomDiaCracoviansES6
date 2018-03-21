@@ -40,9 +40,17 @@ class Status extends Component {
       }) ;
   }
 
+  validationCalc () {
+    const proxData = Math.abs(this.state.data.proxData);
+    const faltam = proxData > 60 ? `${Math.trunc(proxData / 60)} h e ${proxData % 60} min` : `${proxData} min`;
+    if (this.state.data.proxData >= 0) {
+      return `${this.state.data.bdc[2]} mensagens`;
+    } else {
+      return faltam;
+    }
+  }
+
   render() {
-    const proxData = this.state.data.proxData;
-    const faltam = proxData > 60 ? `${Math.round(proxData / 60)} h e ${proxData % 60} min` : `${proxData} min`;
     return (
         <div className="card">
           <div className="card-header" id="headingOne" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
@@ -57,7 +65,7 @@ class Status extends Component {
               <span className="status__itemTitle"> Não validações </span>
               <span className="status__item">{`Proximas validações: ${this.state.data.bdc[0]}`}</span>
               <span className="status__item">{`Intervalo: ${this.state.data.bdc[1][0]}`}</span>
-              <span className="status__item">{`Proxima validação em: ${faltam}`}</span>
+              <span className="status__item">{`Proxima validação em: ${this.validationCalc()}`}</span>
               <span className="status__item">
                 {`Proxima data : ${moment(this.state.data.bdc[3]).format('DD / MM / YYYY')}`}
               </span>

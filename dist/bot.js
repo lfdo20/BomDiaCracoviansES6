@@ -500,7 +500,6 @@ bot.onText(/^(.+)?(@bomdiacracobot)(.+)?$/, function (msg, match) {
         msgBack = neutralReturns[rand];
         break;
     }
-
     bot.sendMessage(msg.chat.id, msgBack, { reply_to_message_id: msg.message_id }).then(function () {});
   }
 });
@@ -510,7 +509,7 @@ var putexec = false,
     putstartcheck = false,
     vcmsg = '';
 var dataProx = exports.dataProx = function dataProx() {
-  return Math.abs((0, _moment2.default)().diff(bdiadaycount[1][1], 'minutes'));
+  return (0, _moment2.default)().diff(bdiadaycount[1][1], 'minutes');
 };
 // mensagens de início / fim de hora da putaria
 bot.onText(/(.)?/gi, function (msg) {
@@ -588,9 +587,7 @@ bot.onText(/(.)?/gi, function (msg) {
 
   var validDate = _moment2.default.unix(msg.date).isAfter(bdiadaycount[3], 'hours');
   if (bdiadaycount[0].length > 0 || validDate) {
-    bdiadaycount[1][0] = Math.ceil(18 / (bdiadaycount[0].length + 1));
     var _timeS2 = _moment2.default.unix(msg.date);
-
     if (bdiadaycount[1][1] === 0) {
       bdiadaycount[2] = bdiadaycount[0][0];
       bdiadaycount[1][1] = _moment2.default.unix(msg.date);
@@ -774,11 +771,13 @@ bot.onText(bdrx, function (msg, match) {
       bdiadaycount[0].push(msg.text.length);
       saveNewdata('nv', bdiadaycount);
     } else if (bdiadaycount[0].length === 5) {
+      bdiadaycount[1][0] = Math.ceil(18 / (bdiadaycount[0].length + 1));
       var daysArray = Array.from(bdiadaycount[0]);
-      var medium = Math.floor(daysArray.reduce(function (acc, val) {
+      var pauseCalc = Math.floor(daysArray.reduce(function (acc, val) {
         return acc + val;
       }) / daysArray.length);
-      bdiadaycount[3] = _moment2.default.unix(msg.date).add(medium, 'hours');
+      var addHours = bdiadaycount[1][0] * 5 + pauseCalc;
+      bdiadaycount[3] = _moment2.default.unix(msg.date).add(addHours, 'hours');
       bdiadaycount[1][2] = false;
       saveNewdata('nv', bdiadaycount);
     }

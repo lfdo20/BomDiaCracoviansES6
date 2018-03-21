@@ -445,8 +445,6 @@ bot.onText(/^(.+)?(@bomdiacracobot)(.+)?$/, (msg, match) => {
         msgBack = neutralReturns[rand];
         break;
     }
-
-
     bot.sendMessage(msg.chat.id, msgBack, { reply_to_message_id: msg.message_id }).then(() => { });
   }
 });
@@ -455,7 +453,7 @@ bot.onText(/^(.+)?(@bomdiacracobot)(.+)?$/, (msg, match) => {
 let putexec = false,
   putstartcheck = false,
   vcmsg = '';
-export const dataProx = () => (Math.abs(moment().diff(bdiadaycount[1][1], 'minutes')));
+export const dataProx = () => (moment().diff(bdiadaycount[1][1], 'minutes'));
 // mensagens de início / fim de hora da putaria
 bot.onText(/(.)?/gi, (msg) => {
   if (nowDay() === 'Fri') {
@@ -529,9 +527,7 @@ bot.onText(/(.)?/gi, (msg) => {
 
   const validDate = moment.unix(msg.date).isAfter(bdiadaycount[3], 'hours');
   if (bdiadaycount[0].length > 0 || validDate) {
-    bdiadaycount[1][0] = Math.ceil(18 / (bdiadaycount[0].length + 1));
     const timeS = moment.unix(msg.date);
-
     if (bdiadaycount[1][1] === 0) {
       bdiadaycount[2] = bdiadaycount[0][0];
       bdiadaycount[1][1] = moment.unix(msg.date);
@@ -734,9 +730,11 @@ Nada de marcar pessoas e botar o meu na reta.`;
       bdiadaycount[0].push(msg.text.length);
       saveNewdata('nv', bdiadaycount);
     } else if (bdiadaycount[0].length === 5) {
+      bdiadaycount[1][0] = Math.ceil(18 / (bdiadaycount[0].length + 1));
       const daysArray = Array.from(bdiadaycount[0]);
-      const medium = Math.floor(daysArray.reduce((acc, val) => acc + val) / daysArray.length);
-      bdiadaycount[3] = moment.unix(msg.date).add(medium, 'hours');
+      const pauseCalc = Math.floor(daysArray.reduce((acc, val) => acc + val) / daysArray.length);
+      const addHours = (bdiadaycount[1][0] * 5) + pauseCalc;
+      bdiadaycount[3] = moment.unix(msg.date).add(addHours, 'hours');
       bdiadaycount[1][2] = false;
       saveNewdata('nv', bdiadaycount);
     }
