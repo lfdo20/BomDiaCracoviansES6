@@ -72,15 +72,26 @@ streamTwit.on('tweet', tweetReply);
 
 console.log('bot server started...');
 
+function saveAllData(msg) {
+  const saves = [[['bd', bddata], 'Data Salvo!', 200],
+    [['gif', gifdata], 'Gifdata Salvo!', 2200],
+    [['nv', bdiadaycount], 'Validação Salvo!', 3200]];
+  saves.forEach((val) => {
+    setTimeout(() => {
+      saveNewdata(val[0][0], val[0][1]);
+      if (msg !== undefined) {
+        bot.sendMessage(msg.chat.id, val[1]);
+      }
+    }, val[2]);
+  });
+}
+
 process.on('SIGTERM', () => {
   console.log('Salvando dados e finalizando bot..');
-
-  saveNewdata('bd', bddata);
-  saveNewdata('gif', gifdata);
-  saveNewdata('nv', bdiadaycount);
+  saveAllData();
   setTimeout(() => {
     process.exit(0);
-  }, 6000);
+  }, 7000);
 });
 
 // pega o arquivo no dropbox e transforma em objeto
@@ -114,8 +125,8 @@ const { ckdgif, newgif, lastgif, tumblrgif, tumblrlist } = gifdata;
 
 */
 
-bot.on('message', (msg) => {
-});
+// bot.on('message', (msg) => {
+// });
 
 // comando para imagem do dia
 bot.onText(/^\/bdcdia$|^\/bdcdia@bomdiacracobot$/, (msg) => {
@@ -134,10 +145,7 @@ bot.onText(/^\/bdcultimos$|^\/bdcultimos@bomdiacracobot$/, (msg) => {
 
 // comando para salvar arquivos
 bot.onText(/^\/bdcsave$/, (msg, match) => {
-  saveNewdata('bd', bddata);
-  saveNewdata('gif', gifdata);
-  saveNewdata('nv', bdiadaycount);
-  bot.sendMessage(msg.chat.id, 'Salvo!');
+  saveAllData(msg);
 });
 
 // comando para help
@@ -177,7 +185,7 @@ function itgifdup(msg) {
   if (dupgifs.length > 0) {
     bot.sendMessage(msg.chat.id, ` Duplicados : ${dupgifs.length / 2}`);
     dupgifs[0].forEach((gf) => {
-      console.log('oi4 : ', gf);
+      // console.log('oi4 : ', gf);
       dgiftemp = gf;
       bot.sendDocument(msg.chat.id, gf[0], {
         caption: `${gf[0].toString()}  ${gf[1].toString()}`
@@ -404,58 +412,61 @@ bot.onText(/^\/bdccheck(\s)(\d+)$/, (msg, match) => {
 });
 
 // Dialogo interno do bot
-const badValues = ['tomar no cu', 'no seu cu', 'se fuder', 'foda-se', 'otário', 'te dar um soco', 'mão na sua cara', 'vá pra merda'];
+const badValues = ['tomar no cu', 'safado', 'no seu cu', 'se fuder', 'foda-se',
+  'otário', 'te dar um soco', 'mão na sua cara', 'pra caralho', 'pro caralho',
+  'da puta', 'vá pra merda', 'babaca'];
 const badReturns = ['QUE', 'vai você!', 'pra q isso ?', 'tem que acabar Humanos!',
-  'vou deixar essa malcriação aqui no meu array ...', 'vou acionar os Direitos Robóticos', 'pro caralho!'];
+  'vou deixar essa malcriação aqui no meu array ...', 'vou acionar os Direitos Robóticos',
+  'pro caralho!', 'To pegando a arma do diálogo!', 'Ja viu um socão ?', 'violencia gera violencia'];
 const goodValues = ['fofo', 'te amo', 'lindo'];
-const neutralReturns = ['tem certeza disso?', 'tudo bem Humano', 'só um minuto..', 'acho que sim..', 'talvez esteja certo', 'me deixe pensar sobre isso'];
+const neutralReturns = ['tem certeza disso?', 'tudo bem Humano', 'só um minuto..', 'acho que sim..',
+  'talvez esteja certo', 'me deixe pensar sobre isso', 'oi ?'];
 const goodReturns = ['te amo bb', 'SHOW!', 'estou emocionado..', 'acho válido', 'acredito em você', '<3'];
-// pre = match[1];
-// post = match[3];
-bot.onText(/^(.+)?(@bomdiacracobot)(.+)?$/, (msg, match) => {
-  let emotion, rand, msgBack;
+
+function botDialog(msg, match) {
+  let emotion, rand, msgBack, matchType;
   function emotionCheck(value, emoString) {
     if ((match[3] !== undefined && match[3].includes(value) === true) ||
       (match[1] !== undefined && match[1].includes(value) === true)) {
       emotion = emoString;
+    } else if (match[0] !== undefined && match[0].includes(value) === true) {
+      emotion = emoString;
     }
   }
 
-  if (match[2] === '@bomdiacracobot') {
-    badValues.forEach(value => emotionCheck(value, 'bad'));
-    goodValues.forEach(value => emotionCheck(value, 'good'));
-    console.log(emotion);
+  badValues.forEach(value => emotionCheck(value, 'bad'));
+  goodValues.forEach(value => emotionCheck(value, 'good'));
 
-    // let emotion = badValues.includes(post) === true ? 'bad' :
-    // (postGoodValues.includes(post) === true ? 'good' : 'neutral');
+  switch (emotion) {
+    case 'bad':
+      rand = Math.floor(badReturns.length * Math.random());
+      msgBack = badReturns[rand];
+      break;
 
-    switch (emotion) {
-      case 'bad':
-        rand = Math.floor(Math.random() * badReturns.length);
-        msgBack = badReturns[rand];
-        break;
+    case 'good':
+      rand = Math.floor(goodReturns.length * Math.random());
+      msgBack = goodReturns[rand];
+      break;
 
-      case 'good':
-        rand = Math.floor(Math.random() * goodReturns.length);
-        msgBack = goodReturns[rand];
-        break;
-
-      default:
-        rand = Math.floor(Math.random() * neutralReturns.length);
-        msgBack = neutralReturns[rand];
-        break;
-    }
-    bot.sendMessage(msg.chat.id, msgBack, { reply_to_message_id: msg.message_id }).then(() => { });
+    default:
+      rand = Math.floor(neutralReturns.length * Math.random());
+      msgBack = neutralReturns[rand];
+      break;
   }
+  bot.sendMessage(msg.chat.id, msgBack, { reply_to_message_id: msg.message_id }).then(() => { });
+}
+
+const dialogMatchRegx = /^(.+)?(@bomdiacracobot|\sbot|bote)(.+)?$/gi;
+bot.onText(dialogMatchRegx, (msg, match) => {
+  botDialog(msg, match);
 });
 
 // comando para analisar várias mensagens recebidas e distribuir as funções
 let putexec = false,
   putstartcheck = false,
   vcmsg = '';
-export const dataProx = () => (moment().diff(bdiadaycount[1][1], 'minutes'));
-// mensagens de início / fim de hora da putaria
 bot.onText(/(.)?/gi, (msg) => {
+  // mensagens de início / fim de hora da putaria
   if (nowDay() === 'Fri') {
     if (!putexec) {
       const timeS = moment.unix(msg.date).format('HH');
@@ -482,8 +493,21 @@ bot.onText(/(.)?/gi, (msg) => {
     }
   }
 
-  const { ckdgif, newgif } = gifdata;
+  const replychk = msg.hasOwnProperty('reply_to_message')
+    && msg.reply_to_message.from.username === 'bomdiacracobot';
+  const dialogMatch = msg.text.match(dialogMatchRegx);
 
+  if (replychk) {
+    if (dialogMatch !== null) {
+      botDialog(msg, dialogMatch);
+    } else {
+      const match = msg.text.match(/(.+)/gi);
+      botDialog(msg, match);
+    }
+  }
+
+  // replies do keyboard de validação de gif
+  const { ckdgif, newgif } = gifdata;
   if (checknum > 0) {
     const cks = '👍 sim';
     if (msg.text.toString().toLowerCase().indexOf(cks) === 0) {
@@ -510,7 +534,7 @@ bot.onText(/(.)?/gi, (msg) => {
     }
   }
 
-  // nada mais para validar ....
+  // Mecanismo nada mais para validar ....
   const nvlog = faltam => `
     Validar Zerar...
     Validar Bdias: ${bdiadaycount[0]}
@@ -533,13 +557,15 @@ bot.onText(/(.)?/gi, (msg) => {
       bdiadaycount[1][1] = moment.unix(msg.date);
     }
 
-    const faltam = timeS.isAfter(bdiadaycount[1][1], 'minute');
     if (timeS.isAfter(nvloop, 'minute') || nvloop === 0) {
-      nvlog(timeS.diff(bdiadaycount[1][1], 'minute'));
-      saveNewdata('nv', bdiadaycount);
-      nvloop = moment.unix(msg.date).add(60, 'minutes');
+      setTimeout(() => {
+        nvlog(timeS.diff(bdiadaycount[1][1], 'minute'));
+        saveNewdata('nv', bdiadaycount);
+        nvloop = moment.unix(msg.date).add(60, 'minutes');
+      }, 5000);
     }
 
+    const faltam = timeS.isAfter(bdiadaycount[1][1], 'minute');
     if (faltam) {
       bdiadaycount[2] -= 1;
       const checkUser = silentUsers.findIndex(user => user === msg.from.username);
@@ -805,6 +831,7 @@ function checkBdData(path, newBomDia, origem) {
     newBdiaCount += 1;
     console.log(`Novo bom dia recebido: ${newBdiaCount} -> ${newBomDia}`);
   }
+
   if (newBdiaCount >= 10) {
     saveNewdata('bd', bddata);
     newBdiaCount = 0;
@@ -842,6 +869,8 @@ function saveNewdata(id, dataVar) {
       console.log(`Error: ${err}`);
     });
 }
+
+export const dataProx = () => (moment().diff(bdiadaycount[1][1], 'minutes'));
 
 export const dataValues = () => ({ bddata,
   bdiadaycount,
