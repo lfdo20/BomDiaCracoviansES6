@@ -33,6 +33,10 @@ var _nodeTelegramBotApi = require('node-telegram-bot-api');
 
 var _nodeTelegramBotApi2 = _interopRequireDefault(_nodeTelegramBotApi);
 
+var _v = require('watson-developer-cloud/assistant/v1');
+
+var _v2 = _interopRequireDefault(_v);
+
 var _convertbtc = require('./convertbtc');
 
 var _convertbtc2 = _interopRequireDefault(_convertbtc);
@@ -97,6 +101,15 @@ var T = new _twit2.default({
 var streamTwit = T.stream('user');
 streamTwit.on('tweet', tweetReply);
 
+// Watson config
+var watsonContext = [];
+var watsonBot = new _v2.default({
+  username: process.env.ASSISTANT_USERNAME,
+  password: process.env.ASSISTANT_PASSWORD,
+  url: 'https://gateway.watsonplatform.net/assistant/api/',
+  version: '2018-02-16'
+});
+
 // Seção de Notas
 
 // IDEA: organizar como o bot será utilizado em vários grupos:
@@ -107,12 +120,14 @@ streamTwit.on('tweet', tweetReply);
 
 console.log('bot server started...');
 
-function saveAllData() {
+function saveAllData(msg) {
   var saves = [[['bd', bddata], 'Data Salvo!', 200], [['gif', gifdata], 'Gifdata Salvo!', 2200], [['nv', bdiadaycount], 'Validação Salvo!', 3200]];
   saves.forEach(function (val) {
     setTimeout(function () {
       saveNewdata(val[0][0], val[0][1]);
-      bot.sendMessage(msg.chat.id, val[1]);
+      if (msg !== undefined) {
+        bot.sendMessage(msg.chat.id, val[1]);
+      }
     }, val[2]);
   });
 }
@@ -177,7 +192,7 @@ bot.onText(/^\/bdcultimos$|^\/bdcultimos@bomdiacracobot$/, function (msg) {
 
 // comando para salvar arquivos
 bot.onText(/^\/bdcsave$/, function (msg, match) {
-  saveAllData();
+  saveAllData(msg);
 });
 
 // comando para help
@@ -460,49 +475,35 @@ bot.onText(/^\/bdccheck(\s)(\d+)$/, function (msg, match) {
 });
 
 // Dialogo interno do bot
-var badValues = ['tomar no cu', 'safado', 'no seu cu', 'se fuder', 'foda-se', 'otário', 'te dar um soco', 'mão na sua cara', 'pra caralho', 'pro caralho', 'filho da puta', 'vá pra merda'];
-var badReturns = ['QUE', 'vai você!', 'pra q isso ?', 'tem que acabar Humanos!', 'vou deixar essa malcriação aqui no meu array ...', 'vou acionar os Direitos Robóticos', 'pro caralho!', 'To pegando a arma do diálogo!', 'Ja viu um socão ?', 'violencia gera violencia'];
-var goodValues = ['fofo', 'te amo', 'lindo'];
-var neutralReturns = ['tem certeza disso?', 'tudo bem Humano', 'só um minuto..', 'acho que sim..', 'talvez esteja certo', 'me deixe pensar sobre isso', 'oi ?'];
-var goodReturns = ['te amo bb', 'SHOW!', 'estou emocionado..', 'acho válido', 'acredito em você', '<3'];
 
 function botDialog(msg, match) {
-  var emotion = void 0,
-      rand = void 0,
-      msgBack = void 0,
-      matchType = void 0;
-  function emotionCheck(value, emoString) {
-    if (match[3] !== undefined && match[3].includes(value) === true || match[1] !== undefined && match[1].includes(value) === true) {
-      emotion = emoString;
-    } else if (match[0] !== undefined && match[0].includes(value) === true) {
-      emotion = emoString;
+  var watsonMsg = void 0;
+
+  if (watsonContext.length === 0 || _moment2.default.unix(msg.date).isAfter(watsonContext[1])) {
+    watsonMsg = {
+      workspace_id: 'f7e49abb-1967-419c-b782-51a86ac427e4',
+      input: { text: msg.text }
+    };
+  } else {
+    watsonMsg = {
+      workspace_id: 'f7e49abb-1967-419c-b782-51a86ac427e4',
+      input: { text: msg.text },
+      context: watsonContext[0].context
+    };
+  }
+
+  watsonBot.message(watsonMsg, function (err, response) {
+    if (err) {
+      console.log('error:', JSON.stringify(err, null, 2));
+    } else {
+      var watsonResponse = JSON.stringify(response, null, 2);
+      watsonContext[0] = response;
+      // console.log(response.output.text[0]);
+      bot.sendMessage(msg.chat.id, response.output.text[0], { reply_to_message_id: msg.message_id }).then(function () {
+        watsonContext[1] = _moment2.default.unix(msg.date).add(15, 'minutes');
+      });
     }
-  }
-
-  badValues.forEach(function (value) {
-    return emotionCheck(value, 'bad');
   });
-  goodValues.forEach(function (value) {
-    return emotionCheck(value, 'good');
-  });
-
-  switch (emotion) {
-    case 'bad':
-      rand = Math.floor(badReturns.length * Math.random());
-      msgBack = badReturns[rand];
-      break;
-
-    case 'good':
-      rand = Math.floor(goodReturns.length * Math.random());
-      msgBack = goodReturns[rand];
-      break;
-
-    default:
-      rand = Math.floor(neutralReturns.length * Math.random());
-      msgBack = neutralReturns[rand];
-      break;
-  }
-  bot.sendMessage(msg.chat.id, msgBack, { reply_to_message_id: msg.message_id }).then(function () {});
 }
 
 var dialogMatchRegx = /^(.+)?(@bomdiacracobot|\sbot|bote)(.+)?$/gi;
@@ -601,7 +602,7 @@ bot.onText(/(.)?/gi, function (msg) {
   }
 
   var validDate = _moment2.default.unix(msg.date).isAfter(bdiadaycount[3], 'hours');
-  if (bdiadaycount[0].length > 0 || validDate) {
+  if (bdiadaycount[0].length > 0 && validDate) {
     var _timeS2 = _moment2.default.unix(msg.date);
     if (bdiadaycount[1][1] === 0) {
       bdiadaycount[2] = bdiadaycount[0][0];
@@ -786,10 +787,11 @@ bot.onText(bdrx, function (msg, match) {
 
     if (validQuantity && validDate && bdiadaycount[1][2] === true) {
       bdiadaycount[0].push(msg.text.length);
+      bdiadaycount[1][0] = Math.ceil(18 / (bdiadaycount[0].length + 1));
       saveNewdata('nv', bdiadaycount);
     } else if (bdiadaycount[0].length === 5) {
-      bdiadaycount[1][0] = Math.ceil(18 / (bdiadaycount[0].length + 1));
       var daysArray = Array.from(bdiadaycount[0]);
+      bdiadaycount[1][0] = Math.ceil(18 / (bdiadaycount[0].length + 1));
       var pauseCalc = Math.floor(daysArray.reduce(function (acc, val) {
         return acc + val;
       }) / daysArray.length);
@@ -806,10 +808,10 @@ bot.onText(bdrx, function (msg, match) {
 });
 
 // Twitter sender
-function newTwit(staText) {}
-// console.log('twit status', staText);
-// T.post('statuses/update', { status: staText }, (err, data, response) => { });
-
+function newTwit(staText) {
+  console.log('twit status', staText);
+  T.post('statuses/update', { status: staText }, function (err, data, response) {});
+}
 
 // Twitter Replyer
 var bdrxtw = /^(@\w+\s)(((bo|bu)(\w+)?)(\s?)((di|de|dj|ena)\w+))(\s?|\.+|,|!|\?)?(\s)?(.+)?$/gi;
@@ -870,14 +872,11 @@ function checkBdData(path, newBomDia, origem) {
     newgifCount += 1;
     console.log('Novo gif recebido: ' + newgifCount + ' -> ' + newBomDia);
   } else if (existe === -1 && origem === 'bomdia') {
-    console.log(path, newBomDia);
-
     path.push(newBomDia);
-    console.log(bddata.bomdia[bddata.bomdia.length]);
-
     newBdiaCount += 1;
     console.log('Novo bom dia recebido: ' + newBdiaCount + ' -> ' + newBomDia);
   }
+
   if (newBdiaCount >= 10) {
     saveNewdata('bd', bddata);
     newBdiaCount = 0;
