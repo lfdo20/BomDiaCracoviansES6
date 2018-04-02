@@ -9,18 +9,13 @@ var app = express();
 
 app.use(express.static(path.join(__dirname, '../web')));
 
-app.get('/api/length', function (req, res) {
+app.get('/api', function (req, res) {
   res.json({
     bdlen: dataValues().bddata.bomdia.length,
     giflen: dataValues().gifdata.ckdgif.length,
     gifvalidlen: dataValues().gifdata.newgif.length,
     bdc: dataValues().bdiadaycount,
-    proxData: dataProx()
-  });
-});
-
-app.get('/api/bdias', function (req, res) {
-  res.json({
+    proxData: dataProx(),
     bdias: dataValues().bddata.latebdreceived,
   });
 });

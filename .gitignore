@@ -65,7 +65,11 @@ typings/
 # backup directory
 .bkp
 
+# vscode directory
+.vscode
+
 # data files
+
 bddata.json
 gifdata.json
 nvdata.json

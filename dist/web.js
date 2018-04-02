@@ -12,18 +12,13 @@ var app = express();
 
 app.use(express.static(path.join(__dirname, '../web')));
 
-app.get('/api/length', function (req, res) {
+app.get('/api', function (req, res) {
   res.json({
     bdlen: (0, _bot.dataValues)().bddata.bomdia.length,
     giflen: (0, _bot.dataValues)().gifdata.ckdgif.length,
     gifvalidlen: (0, _bot.dataValues)().gifdata.newgif.length,
     bdc: (0, _bot.dataValues)().bdiadaycount,
-    proxData: (0, _bot.dataProx)()
-  });
-});
-
-app.get('/api/bdias', function (req, res) {
-  res.json({
+    proxData: (0, _bot.dataProx)(),
     bdias: (0, _bot.dataValues)().bddata.latebdreceived
   });
 });

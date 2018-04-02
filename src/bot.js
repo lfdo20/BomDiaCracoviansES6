@@ -456,7 +456,7 @@ function botDialog(msg, match) {
   });
 }
 
-const dialogMatchRegx = /^(.+)?(@bomdiacracobot|\sbot|bote)(.+)?$/gi;
+const dialogMatchRegx = /^(.+\s)?(@bomdiacracobot|bot|bote)(\s.+)?$/gi;
 bot.onText(dialogMatchRegx, (msg, match) => {
   botDialog(msg, match);
 });

@@ -506,7 +506,7 @@ function botDialog(msg, match) {
   });
 }
 
-var dialogMatchRegx = /^(.+)?(@bomdiacracobot|\sbot|bote)(.+)?$/gi;
+var dialogMatchRegx = /^(.+\s)?(@bomdiacracobot|bot|bote)(\s.+)?$/gi;
 bot.onText(dialogMatchRegx, function (msg, match) {
   botDialog(msg, match);
 });
