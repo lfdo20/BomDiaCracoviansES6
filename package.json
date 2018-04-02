@@ -1,6 +1,6 @@
 {
   "name": "bomdiacracoviansbot",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Bot de Bom dia da craco",
   "main": "index.js",
   "scripts": {
@@ -25,6 +25,7 @@
   "author": "Leandro Fernandes lfdo <lfdo20@gmail.com> (https://lfdo20.github.io/lfdo)",
   "license": "MIT",
   "dependencies": {
+    "apiai": "^4.0.3",
     "axios": "^0.18.0",
     "babel-cli": "^6.26.0",
     "babel-core": "^6.26.0",
@@ -39,7 +40,7 @@
     "request": "^2.83.0",
     "styled-components": "^3.2.3",
     "twit": "^2.2.9",
-    "watson-developer-cloud": "^3.2.1"
+    "uuid": "^3.2.1"
   },
   "babel": {
     "presets": [

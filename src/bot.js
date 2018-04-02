@@ -5,7 +5,8 @@ import dotenv from 'dotenv';
 import Dropbox from 'dropbox';
 import Twit from 'twit';
 import Bot from 'node-telegram-bot-api';
-import AssistantV1 from 'watson-developer-cloud/assistant/v1';
+import apiai from 'apiai';
+import uuid from 'uuid/v4';
 import cBtc from './convertbtc';
 
 // local enviroment variables
@@ -64,13 +65,17 @@ const streamTwit = T.stream('user');
 streamTwit.on('tweet', tweetReply);
 
 // Watson config
-const watsonContext = [];
-const watsonBot = new AssistantV1({
-  username: process.env.ASSISTANT_USERNAME,
-  password: process.env.ASSISTANT_PASSWORD,
-  url: 'https://gateway.watsonplatform.net/assistant/api/',
-  version: '2018-02-16',
-});
+// const watsonContext = [];
+// const watsonBot = new AssistantV1({
+//   username: process.env.ASSISTANT_USERNAME,
+//   password: process.env.ASSISTANT_PASSWORD,
+//   url: 'https://gateway.watsonplatform.net/assistant/api/',
+//   version: '2018-02-16',
+// });
+
+// Dialogflow config
+const dialogFlow = apiai(process.env.APIAI_TOKEN, { language: 'pt-BR' });
+const diagflowSession = [];
 
 // Seção de Notas
 
@@ -424,36 +429,43 @@ bot.onText(/^\/bdccheck(\s)(\d+)$/, (msg, match) => {
 // Dialogo interno do bot
 
 function botDialog(msg, match) {
-  let watsonMsg;
-
-  if (watsonContext.length === 0 || moment.unix(msg.date).isAfter(watsonContext[1])) {
-    watsonMsg = {
-      workspace_id: 'f7e49abb-1967-419c-b782-51a86ac427e4',
-      input: { text: msg.text }
-    };
-  } else {
-    watsonMsg = {
-      workspace_id: 'f7e49abb-1967-419c-b782-51a86ac427e4',
-      input: { text: msg.text },
-      context: watsonContext[0].context
-    };
+  if (diagflowSession.length === 0 || moment.unix(msg.date).isAfter(diagflowSession[1])) {
+    diagflowSession[0] = uuid();
+    console.log('a', diagflowSession);
   }
 
-  watsonBot.message(watsonMsg, (err, response) => {
-    if (err) {
-      console.log('error:', JSON.stringify(err, null, 2));
-    } else {
-      const watsonResponse = JSON.stringify(response, null, 2);
-      watsonContext[0] = response;
-      // console.log(response.output.text[0]);
-      bot.sendMessage(
-        msg.chat.id, response.output.text[0],
-        { reply_to_message_id: msg.message_id }
-      ).then(() => {
-        watsonContext[1] = moment.unix(msg.date).add(15, 'minutes');
-      });
-    }
+  const chatbot = dialogFlow.textRequest(msg.text, { sessionId: diagflowSession[0] });
+  chatbot.on('response', (response) => {
+    console.log(response);
+    bot.sendMessage(
+      msg.chat.id, response.result.fulfillment.speech,
+      { reply_to_message_id: msg.message_id }
+    ).then(() => {
+      diagflowSession[1] = moment.unix(msg.date).add(15, 'minutes');
+    });
   });
+
+  chatbot.on('error', (error) => {
+    console.log(error);
+  });
+
+  chatbot.end();
+
+  // watsonBot.message(watsonMsg, (err, response) => {
+  //   if (err) {
+  //     console.log('error:', JSON.stringify(err, null, 2));
+  //   } else {
+  //     const watsonResponse = JSON.stringify(response, null, 2);
+  //     diagflowSession[0] = response;
+  //     // console.log(response.output.text[0]);
+  //     bot.sendMessage(
+  //       msg.chat.id, response.output.text[0],
+  //       { reply_to_message_id: msg.message_id }
+  //     ).then(() => {
+  //       diagflowSession[1] = moment.unix(msg.date).add(15, 'minutes');
+  //     });
+  //   }
+  // });
 }
 
 const dialogMatchRegx = /^(.+\s)?(@bomdiacracobot|bot|bote)(\s.+)?$/gi;

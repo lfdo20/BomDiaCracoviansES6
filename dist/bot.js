@@ -33,9 +33,17 @@ var _nodeTelegramBotApi = require('node-telegram-bot-api');
 
 var _nodeTelegramBotApi2 = _interopRequireDefault(_nodeTelegramBotApi);
 
+var _apiai = require('apiai');
+
+var _apiai2 = _interopRequireDefault(_apiai);
+
 var _v = require('watson-developer-cloud/assistant/v1');
 
 var _v2 = _interopRequireDefault(_v);
+
+var _v3 = require('uuid/v4');
+
+var _v4 = _interopRequireDefault(_v3);
 
 var _convertbtc = require('./convertbtc');
 
@@ -109,6 +117,10 @@ var watsonBot = new _v2.default({
   url: 'https://gateway.watsonplatform.net/assistant/api/',
   version: '2018-02-16'
 });
+
+// Dialogflow config
+var dialogFlow = (0, _apiai2.default)(process.env.APIAI_TOKEN, { language: 'pt-BR' });
+var diagflowSession = [];
 
 // Seção de Notas
 
@@ -477,33 +489,40 @@ bot.onText(/^\/bdccheck(\s)(\d+)$/, function (msg, match) {
 // Dialogo interno do bot
 
 function botDialog(msg, match) {
-  var watsonMsg = void 0;
-
-  if (watsonContext.length === 0 || _moment2.default.unix(msg.date).isAfter(watsonContext[1])) {
-    watsonMsg = {
-      workspace_id: 'f7e49abb-1967-419c-b782-51a86ac427e4',
-      input: { text: msg.text }
-    };
-  } else {
-    watsonMsg = {
-      workspace_id: 'f7e49abb-1967-419c-b782-51a86ac427e4',
-      input: { text: msg.text },
-      context: watsonContext[0].context
-    };
+  if (diagflowSession.length === 0 || _moment2.default.unix(msg.date).isAfter(diagflowSession[1])) {
+    diagflowSession[0] = (0, _v4.default)();
+    console.log('a', diagflowSession);
   }
 
-  watsonBot.message(watsonMsg, function (err, response) {
-    if (err) {
-      console.log('error:', JSON.stringify(err, null, 2));
-    } else {
-      var watsonResponse = JSON.stringify(response, null, 2);
-      watsonContext[0] = response;
-      // console.log(response.output.text[0]);
-      bot.sendMessage(msg.chat.id, response.output.text[0], { reply_to_message_id: msg.message_id }).then(function () {
-        watsonContext[1] = _moment2.default.unix(msg.date).add(15, 'minutes');
-      });
-    }
+  var chatbot = dialogFlow.textRequest(msg.text, { sessionId: diagflowSession[0] });
+  chatbot.on('response', function (response) {
+    console.log(response);
+    bot.sendMessage(msg.chat.id, response.result.fulfillment.speech, { reply_to_message_id: msg.message_id }).then(function () {
+      diagflowSession[1] = _moment2.default.unix(msg.date).add(15, 'minutes');
+    });
   });
+
+  chatbot.on('error', function (error) {
+    console.log(error);
+  });
+
+  chatbot.end();
+
+  // watsonBot.message(watsonMsg, (err, response) => {
+  //   if (err) {
+  //     console.log('error:', JSON.stringify(err, null, 2));
+  //   } else {
+  //     const watsonResponse = JSON.stringify(response, null, 2);
+  //     diagflowSession[0] = response;
+  //     // console.log(response.output.text[0]);
+  //     bot.sendMessage(
+  //       msg.chat.id, response.output.text[0],
+  //       { reply_to_message_id: msg.message_id }
+  //     ).then(() => {
+  //       diagflowSession[1] = moment.unix(msg.date).add(15, 'minutes');
+  //     });
+  //   }
+  // });
 }
 
 var dialogMatchRegx = /^(.+\s)?(@bomdiacracobot|bot|bote)(\s.+)?$/gi;
