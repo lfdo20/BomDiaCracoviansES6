@@ -121,10 +121,11 @@ app.post('/webhook', function (req, res) {
         responseFromAPI.on('data', function (chunk) {
           let weather = JSON.parse(chunk);
           let dataToSend = weather.cod === '200' ?
-          `Tempo para ${weather.city.name} em 6 horas : ${weather.list[1].weather[0].description}
-           Temperatura : ${weather.list[1].main.temp} °C
-           Umidade: ${weather.list[1].main.humidity}%`
-          : 'Não consegui entender a cidade, pode especificar melhor ?';
+            dedent`
+            Tempo para ${weather.city.name} em 6 horas : ${weather.list[1].weather[0].description}
+            Temperatura : ${weather.list[1].main.temp} °C
+            Umidade: ${weather.list[1].main.humidity}%`
+            : 'Não consegui entender a cidade, pode especificar melhor ?';
 
           return res.json({
             "fulfillmentText": dataToSend,
@@ -152,6 +153,7 @@ app.post('/webhook', function (req, res) {
                 ]
               }
             },
+          ],
           "source": "weather"
         });
       });
