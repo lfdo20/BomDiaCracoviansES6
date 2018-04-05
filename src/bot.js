@@ -440,7 +440,7 @@ function botDialog(msg, match) {
     console.log('T2 ', response.result.fulfillment.messages);
     console.log('T2 ', response.result);
     bot.sendMessage(
-      msg.chat.id, response.result.fulfillment.messages[0].speech,
+      msg.chat.id, response.result.fulfillment.speech,
       { reply_to_message_id: msg.message_id }
     ).then(() => {
       diagflowSession[1] = moment.unix(msg.date).add(15, 'minutes');

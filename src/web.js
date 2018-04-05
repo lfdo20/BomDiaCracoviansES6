@@ -84,34 +84,25 @@ app.post('/webhook', function (req, res) {
             "fulfillmentText": dataToSend,
             "fulfillmentMessages": [
               {
-                "telegram": {
-                  "text": dataToSend,
-                  "parse_mode": "Markdown"
-                }
-              },
-              {
                 "text": {
                   "text": [
                     dataToSend
                   ]
                 }
               },
-
             ],
             "source": "duckduckgo",
           });
           // });
         }
       }).catch((error) => {
-        console.log(error);
-
         return res.json({
-          "fulfillmentText": 'Não consegui entender a cidade, pode especificar melhor ?',
+          "fulfillmentText": 'Não consegui entender, pode especificar melhor ?',
           "fulfillmentMessages": [
             {
               "text": {
                 "text": [
-                  'Não consegui entender a cidade, pode especificar melhor ?'
+                  'Não consegui entender, pode especificar melhor ?'
                 ]
               }
             }
@@ -139,12 +130,6 @@ app.post('/webhook', function (req, res) {
             "fulfillmentText": dataToSend,
             "fulfillmentMessages": [
               {
-                "telegram": {
-                  "text": dataToSend,
-                  "parse_mode": "Markdown"
-                }
-              },
-              {
                 "text": {
                   "text": [
                     dataToSend
@@ -156,42 +141,17 @@ app.post('/webhook', function (req, res) {
           });
         });
       }, (error) => {
-        const ermsg = `Não consegui
-        entender a cidade,
-
-        pode especificar melhor ?`;
+        const ermsg = `Não consegui entender a cidade, pode especificar melhor ?`;
         return res.json({
           "fulfillmentText": ermsg,
           "fulfillmentMessages": [
             {
               "text": {
-                "text": ermsg,
-                "parse_mode": "Markdown"
-              },
-              "platform": "TELEGRAM"
-            },
-            {
-              "text": {
                 "text": [
-                  'Não consegui entender a cidade, pode especificar melhor ?'
+                  ermsg
                 ]
               }
             },
-            {
-              "data": {
-                "telegram": {
-                  "text": ermsg,
-                  "parse_mode": "Markdown"
-                },
-              },
-            }
-          ],
-          "data": {
-            "telegram": {
-              "text": ermsg,
-              "parse_mode": "Markdown"
-            },
-          },
           "source": "weather"
         });
       });
