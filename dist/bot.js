@@ -37,13 +37,9 @@ var _apiai = require('apiai');
 
 var _apiai2 = _interopRequireDefault(_apiai);
 
-var _v = require('watson-developer-cloud/assistant/v1');
+var _v = require('uuid/v4');
 
 var _v2 = _interopRequireDefault(_v);
-
-var _v3 = require('uuid/v4');
-
-var _v4 = _interopRequireDefault(_v3);
 
 var _convertbtc = require('./convertbtc');
 
@@ -110,13 +106,13 @@ var streamTwit = T.stream('user');
 streamTwit.on('tweet', tweetReply);
 
 // Watson config
-var watsonContext = [];
-var watsonBot = new _v2.default({
-  username: process.env.ASSISTANT_USERNAME,
-  password: process.env.ASSISTANT_PASSWORD,
-  url: 'https://gateway.watsonplatform.net/assistant/api/',
-  version: '2018-02-16'
-});
+// const watsonContext = [];
+// const watsonBot = new AssistantV1({
+//   username: process.env.ASSISTANT_USERNAME,
+//   password: process.env.ASSISTANT_PASSWORD,
+//   url: 'https://gateway.watsonplatform.net/assistant/api/',
+//   version: '2018-02-16',
+// });
 
 // Dialogflow config
 var dialogFlow = (0, _apiai2.default)(process.env.APIAI_TOKEN, { language: 'pt-BR' });
@@ -490,14 +486,16 @@ bot.onText(/^\/bdccheck(\s)(\d+)$/, function (msg, match) {
 
 function botDialog(msg, match) {
   if (diagflowSession.length === 0 || _moment2.default.unix(msg.date).isAfter(diagflowSession[1])) {
-    diagflowSession[0] = (0, _v4.default)();
+    diagflowSession[0] = (0, _v2.default)();
     console.log('a', diagflowSession);
   }
 
-  var chatbot = dialogFlow.textRequest(msg.text, { sessionId: diagflowSession[0] });
+  dialogFlow.language = 'pt-BR';
+  var chatbot = dialogFlow.textRequest(msg.text, { lang: 'pt-BR', sessionId: diagflowSession[0] });
   chatbot.on('response', function (response) {
-    console.log(response);
-    bot.sendMessage(msg.chat.id, response.result.fulfillment.speech, { reply_to_message_id: msg.message_id }).then(function () {
+    console.log('T2 ', response.result.fulfillment.messages);
+    console.log('T2 ', response.result.fulfillment);
+    bot.sendMessage(msg.chat.id, response.result.fulfillment.messages[0].speech, { reply_to_message_id: msg.message_id }).then(function () {
       diagflowSession[1] = _moment2.default.unix(msg.date).add(15, 'minutes');
     });
   });
@@ -525,7 +523,7 @@ function botDialog(msg, match) {
   // });
 }
 
-var dialogMatchRegx = /^(.+\s)?(@bomdiacracobot|bot|bote)(\s.+)?$/gi;
+var dialogMatchRegx = /^(.+\s)?(@bomdiacracobot|bot|bote)(!|,|\.)?(\s.+)?$/gi;
 bot.onText(dialogMatchRegx, function (msg, match) {
   botDialog(msg, match);
 });

@@ -434,11 +434,13 @@ function botDialog(msg, match) {
     console.log('a', diagflowSession);
   }
 
-  const chatbot = dialogFlow.textRequest(msg.text, { sessionId: diagflowSession[0] });
+  dialogFlow.language = 'pt-BR';
+  const chatbot = dialogFlow.textRequest(msg.text, { lang: 'pt-BR', sessionId: diagflowSession[0] });
   chatbot.on('response', (response) => {
-    console.log(response);
+    console.log('T2 ', response.result.fulfillment.messages);
+    console.log('T2 ', response.result.fulfillment);
     bot.sendMessage(
-      msg.chat.id, response.result.fulfillment.speech,
+      msg.chat.id, response.result.fulfillment.messages[0].speech,
       { reply_to_message_id: msg.message_id }
     ).then(() => {
       diagflowSession[1] = moment.unix(msg.date).add(15, 'minutes');
@@ -468,7 +470,7 @@ function botDialog(msg, match) {
   // });
 }
 
-const dialogMatchRegx = /^(.+\s)?(@bomdiacracobot|bot|bote)(\s.+)?$/gi;
+const dialogMatchRegx = /^(.+\s)?(@bomdiacracobot|bot|bote)(!|,|\.)?(\s.+)?$/gi;
 bot.onText(dialogMatchRegx, (msg, match) => {
   botDialog(msg, match);
 });

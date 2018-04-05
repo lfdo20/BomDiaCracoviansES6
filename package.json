@@ -30,6 +30,8 @@
     "babel-cli": "^6.26.0",
     "babel-core": "^6.26.0",
     "babel-preset-env": "^1.6.1",
+    "body-parser": "^1.18.2",
+    "dedent-js": "^1.0.1",
     "dotenv": "^4.0.0",
     "dropbox": "^2.5.12",
     "express": "^4.16.2",

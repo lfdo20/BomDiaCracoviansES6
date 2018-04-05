@@ -219,7 +219,7 @@ class App extends Component {
 
   // bomdiacracovians.herokuapp.com
   componentDidMount() {
-    const url = 'http://localhost:8080/api';
+    const url = 'https://bomdiacracovians.herokuapp.com/api';
     axios.get(url)
       .then((data) => {
         this.setState({ data: data.data });

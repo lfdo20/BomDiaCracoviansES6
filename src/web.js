@@ -1,11 +1,19 @@
 import { dataProx, dataValues } from '../dist/bot'; // certo é ./dist/bot
 
+/* eslint no-var : off */
+/* eslint quotes : off */
+/* eslint quote-props : off */
+/* eslint func-names : off */
+/* eslint prefer-arrow-callback : off */
+
 var express = require('express');
 var path = require('path');
 var packageInfo = require('../package.json');
 var bodyParser = require('body-parser');
 var http = require('http');
 var { URL } = require('url');
+var axios = require('axios');
+var dedent = require('dedent-js');
 
 
 var app = express();
@@ -35,46 +43,202 @@ app.get('/', function (req, res) {
 
 app.post('/webhook', function (req, res) {
   var search = req.body.queryResult.parameters;
-  var api_url = `http://api.openweathermap.org/data/2.5/forecast?cnt=2&units=metric&lang=pt&appid=${process.env.WEATHER_API}`;
-  var reqUrl = new URL(`${api_url}&q=${search['geo-city']}`);
 
-  http.get(reqUrl, (responseFromAPI) => {
-    responseFromAPI.on('data', function (chunk) {
-      let weather = JSON.parse(chunk);
-      let dataToSend = weather.cod === '200' ?
-        `Tempo para ${weather.city.name} em 6 horas : ${weather.list[1].weather[0].description}, temperatura : ${weather.list[1].main.temp} °C, humidade: ${weather.list[1].main.humidity}%`
-        : 'Não consegui entender a cidade, pode especificar melhor ?';
+  console.log('AA ', Object.keys(search).toString());
 
-      return res.json({
-        "fulfillmentText": dataToSend
-        , "fulfillmentMessages": [
-          {
-            "text": {
-              "text": [
-                dataToSend
-              ]
-            }
+  switch (Object.keys(search).toString()) {
+    case 'any':
+      var api_url = `http://api.duckduckgo.com/?format=json&skip_disambig=1&no_html=1&no_redirect=1&t=cracoviansbot&pretty=1`;
+      var reqUrl = `${api_url}&q=${search['any']}`;
+      console.log(reqUrl);
+      axios.get(reqUrl, { responseType: 'json' }).then((response) => {
+        let dataToSend;
+        if (response.status === 200) {
+          // response.on('data', function (chunk) {
+          // const data = JSON.parse(chunk);
+          console.log(response.data);
+
+          if (response.data.Entity !== '') {
+            dataToSend =
+              dedent`
+              ${response.data.Heading} - ${response.data.Entity}
+
+              ${response.data.AbstractText}
+
+              ${response.data.AbstractSource}`;
+            console.log(dataToSend);
+          } else {
+            dataToSend = dedent`
+              ${response.data.Heading}
+
+              ${response.data.RelatedTopics[0].Text}
+
+              ${response.data.RelatedTopics[1] ? response.data.RelatedTopics[1].Text : ''}
+
+              ${response.data.RelatedTopics[2] ? response.data.RelatedTopics[2].Text : ''}`;
+            console.log(dataToSend);
           }
-        ]
-        , "source": "weather"
-      });
 
-    });
-  }, (error) => {
-    return res.json({
-      "fulfillmentText": 'Não consegui entender a cidade, pode especificar melhor ?'
-      , "fulfillmentMessages": [
-        {
-          "text": {
-            "text": [
-              'Não consegui entender a cidade, pode especificar melhor ?'
-            ]
-          }
+          // let responseData = response.result.fulfillment.data;
+          return res.json({
+            "fulfillmentText": dataToSend,
+            "fulfillmentMessages": [
+              {
+                "text": {
+                  "text": [
+                    dataToSend
+                  ]
+                },
+                "platform": "TELEGRAM"
+              },
+              {
+                "payload": {
+                  "telegram": {
+                    "text": dataToSend
+                  }
+                },
+                "platform": "TELEGRAM"
+              },
+              {
+                "text": {
+                  "text": [
+                    dataToSend
+                  ]
+                }
+              },
+              {
+                "data": {
+                  "telegram": {
+                    "text": dataToSend,
+                    "parse_mode": "Markdown"
+                  },
+                },
+              }
+            ],
+            "source": "duckduckgo",
+            "payload": {
+              "telegram": {
+                "text": dataToSend,
+              }
+            },
+          });
+          // });
         }
-      ]
-      , "source": "weather"
-    });
-  });
+      }).catch((error) => {
+        console.log(error);
+
+        return res.json({
+          "fulfillmentText": 'Não consegui entender a cidade, pode especificar melhor ?',
+          "fulfillmentMessages": [
+            {
+              "text": {
+                "text": [
+                  'Não consegui entender a cidade, pode especificar melhor ?'
+                ]
+              }
+            }
+          ],
+          "source": "weather"
+        });
+      });
+      break;
+    case 'geo-city':
+      console.log('BB ', search['geo-city']);
+
+      var api_url = `http://api.openweathermap.org/data/2.5/forecast?cnt=2&units=metric&lang=pt&appid=${process.env.WEATHER_API}`;
+      var reqUrl = new URL(`${api_url}&q=${search['geo-city']}`);
+
+      http.get(reqUrl, (responseFromAPI) => {
+        responseFromAPI.on('data', function (chunk) {
+          let weather = JSON.parse(chunk);
+          let dataToSend = weather.cod === '200' ?
+          `Tempo para ${weather.city.name} em 6 horas : ${weather.list[1].weather[0].description}
+           Temperatura : ${weather.list[1].main.temp} °C
+           Umidade: ${weather.list[1].main.humidity}%`
+          : 'Não consegui entender a cidade, pode especificar melhor ?';
+
+          return res.json({
+            "fulfillmentText": dataToSend,
+            "fulfillmentMessages": [
+              {
+                "text": {
+                  "text": [
+                    dataToSend
+                  ]
+                },
+                "platform": "TELEGRAM"
+              },
+              {
+                "payload": {
+                  "telegram": {
+                    "text": dataToSend
+                  }
+                },
+                "platform": "TELEGRAM"
+              },
+              {
+                "text": {
+                  "text": [
+                    dataToSend
+                  ]
+                }
+              },
+              {
+                "data": {
+                  "telegram": {
+                    "text": dataToSend,
+                    "parse_mode": "Markdown"
+                  },
+                },
+              }
+            ],
+            "source": "weather"
+          });
+        });
+      }, (error) => {
+        const ermsg = `Não consegui
+        entender a cidade,
+
+        pode especificar melhor ?`;
+        return res.json({
+          "fulfillmentText": ermsg,
+          "fulfillmentMessages": [
+            {
+              "text": {
+                "text": ermsg,
+                "parse_mode": "Markdown"
+              },
+              "platform": "TELEGRAM"
+            },
+            {
+              "text": {
+                "text": [
+                  'Não consegui entender a cidade, pode especificar melhor ?'
+                ]
+              }
+            },
+            {
+              "data": {
+                "telegram": {
+                  "text": ermsg,
+                  "parse_mode": "Markdown"
+                },
+              },
+            }
+          ],
+          "data": {
+            "telegram": {
+              "text": ermsg,
+              "parse_mode": "Markdown"
+            },
+          },
+          "source": "weather"
+        });
+      });
+      break;
+    default:
+      console.log('ahá');
+  }
 });
 
 var port = process.env.PORT || 8080;
