@@ -84,15 +84,7 @@ app.post('/webhook', function (req, res) {
             "fulfillmentText": dataToSend,
             "fulfillmentMessages": [
               {
-                "platform": "TELEGRAM",
-                "text": {
-                  "text": [dataToSend],
-                  "parse_mode": "Markdown"
-                }
-              },
-              {
-                "platform": "TELEGRAM",
-                "payload": {
+                "telegram": {
                   "text": dataToSend,
                   "parse_mode": "Markdown"
                 }
@@ -151,39 +143,9 @@ app.post('/webhook', function (req, res) {
                   "text": [
                     dataToSend
                   ]
-                },
-                "platform": "TELEGRAM"
-              },
-              {
-                "payload": {
-                  "telegram": {
-                    "text": dataToSend
-                  }
-                },
-                "platform": "TELEGRAM"
-              },
-              {
-                "text": {
-                  "text": [
-                    dataToSend
-                  ]
                 }
-              },
-              {
-                "data": {
-                  "telegram": {
-                    "text": dataToSend,
-                    "parse_mode": "Markdown"
-                  },
-                },
               }
             ],
-            "data": {
-              "telegram": {
-                "text": dataToSend,
-                "parse_mode": "Markdown"
-              },
-            },
             "source": "weather"
           });
         });
