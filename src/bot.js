@@ -64,15 +64,6 @@ const T = new Twit({
 const streamTwit = T.stream('user');
 streamTwit.on('tweet', tweetReply);
 
-// Watson config
-// const watsonContext = [];
-// const watsonBot = new AssistantV1({
-//   username: process.env.ASSISTANT_USERNAME,
-//   password: process.env.ASSISTANT_PASSWORD,
-//   url: 'https://gateway.watsonplatform.net/assistant/api/',
-//   version: '2018-02-16',
-// });
-
 // Dialogflow config
 const dialogFlow = apiai(process.env.APIAI_TOKEN, { language: 'pt-BR' });
 const diagflowSession = [];
@@ -427,18 +418,14 @@ bot.onText(/^\/bdccheck(\s)(\d+)$/, (msg, match) => {
 });
 
 // Dialogo interno do bot
-
 function botDialog(msg, match) {
   if (diagflowSession.length === 0 || moment.unix(msg.date).isAfter(diagflowSession[1])) {
     diagflowSession[0] = uuid();
-    console.log('a', diagflowSession);
   }
 
   dialogFlow.language = 'pt-BR';
   const chatbot = dialogFlow.textRequest(msg.text, { lang: 'pt-BR', sessionId: diagflowSession[0] });
   chatbot.on('response', (response) => {
-    console.log('T2 ', response.result.fulfillment.messages);
-    console.log('T2 ', response.result);
     const resMsg = response.result.fulfillment.speech;
     const msgTxt = resMsg.replace(/(http.+)/gim, '');
     const msgImg = resMsg.match(/(http.+)/gim);
@@ -458,22 +445,6 @@ function botDialog(msg, match) {
   });
 
   chatbot.end();
-
-  // watsonBot.message(watsonMsg, (err, response) => {
-  //   if (err) {
-  //     console.log('error:', JSON.stringify(err, null, 2));
-  //   } else {
-  //     const watsonResponse = JSON.stringify(response, null, 2);
-  //     diagflowSession[0] = response;
-  //     // console.log(response.output.text[0]);
-  //     bot.sendMessage(
-  //       msg.chat.id, response.output.text[0],
-  //       { reply_to_message_id: msg.message_id }
-  //     ).then(() => {
-  //       diagflowSession[1] = moment.unix(msg.date).add(15, 'minutes');
-  //     });
-  //   }
-  // });
 }
 
 const dialogMatchRegx = /^(.+\s)?(@bomdiacracobot|bot|bote)(!|,|\.)?(\s.+)?$/gi;

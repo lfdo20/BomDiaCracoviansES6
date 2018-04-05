@@ -494,8 +494,14 @@ function botDialog(msg, match) {
   var chatbot = dialogFlow.textRequest(msg.text, { lang: 'pt-BR', sessionId: diagflowSession[0] });
   chatbot.on('response', function (response) {
     console.log('T2 ', response.result.fulfillment.messages);
-    console.log('T2 ', response.result.fulfillment);
-    bot.sendMessage(msg.chat.id, response.result.fulfillment.messages[0].speech, { reply_to_message_id: msg.message_id }).then(function () {
+    console.log('T2 ', response.result);
+    var resMsg = response.result.fulfillment.speech;
+    var msgTxt = resMsg.replace(/(http.+)/gim, '');
+    var msgImg = resMsg.match(/(http.+)/gim);
+    bot.sendMessage(msg.chat.id, msgTxt, { reply_to_message_id: msg.message_id }).then(function () {
+      if (msgImg !== null) {
+        bot.sendMessage(msg.chat.id, msgImg.toString(), { reply_to_message_id: msg.message_id });
+      }
       diagflowSession[1] = _moment2.default.unix(msg.date).add(15, 'minutes');
     });
   });

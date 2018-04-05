@@ -1,4 +1,4 @@
-import { dataProx, dataValues } from '../dist/bot'; // certo é ./dist/bot
+import { dataProx, dataValues } from '../dist/bot';
 
 /* eslint no-var : off */
 /* eslint quotes : off */
@@ -54,11 +54,7 @@ app.post('/webhook', function (req, res) {
       axios.get(reqUrl, { responseType: 'json' }).then((response) => {
         let dataToSend;
         if (response.status === 200) {
-          // response.on('data', function (chunk) {
-          // const data = JSON.parse(chunk);
-          // console.log(response.data);
-
-          if (response.data.Entity !== '') {
+          if (response.data.AbstractText !== '') {
             dataToSend =
               dedent`
               ${response.data.Heading} - ${response.data.Entity}
@@ -68,7 +64,6 @@ app.post('/webhook', function (req, res) {
               ${response.data.AbstractSource}
               ${response.data.Image}
               `;
-            console.log(dataToSend);
           } else {
             dataToSend = dedent`
               ${response.data.Heading}
@@ -78,11 +73,11 @@ app.post('/webhook', function (req, res) {
               ${response.data.RelatedTopics[1] ? response.data.RelatedTopics[1].Text : ''}
 
               ${response.data.RelatedTopics[2] ? response.data.RelatedTopics[2].Text : ''}
+
+              ${response.data.Image}
               `;
-            // console.log(dataToSend);
           }
 
-          // let responseData = response.result.fulfillment.data;
           return res.json({
             "fulfillmentText": dataToSend,
             "fulfillmentMessages": [
@@ -96,7 +91,6 @@ app.post('/webhook', function (req, res) {
             ],
             "source": "duckduckgo",
           });
-          // });
         }
       }).catch((error) => {
         return res.json({

@@ -1,7 +1,8 @@
 'use strict';
 
-var _templateObject = _taggedTemplateLiteral(['\n              ', ' - ', '\n\n              ', '\n\n              ', ''], ['\n              ', ' - ', '\n\n              ', '\n\n              ', '']),
-    _templateObject2 = _taggedTemplateLiteral(['\n              ', '\n\n              ', '\n\n              ', '\n\n              ', ''], ['\n              ', '\n\n              ', '\n\n              ', '\n\n              ', '']);
+var _templateObject = _taggedTemplateLiteral(['\n              ', ' - ', '\n\n              ', '\n\n              ', '\n              ', '\n              '], ['\n              ', ' - ', '\n\n              ', '\n\n              ', '\n              ', '\n              ']),
+    _templateObject2 = _taggedTemplateLiteral(['\n              ', '\n\n              ', '\n\n              ', '\n\n              ', '\n\n              ', '\n              '], ['\n              ', '\n\n              ', '\n\n              ', '\n\n              ', '\n\n              ', '\n              ']),
+    _templateObject3 = _taggedTemplateLiteral(['\n            Tempo para ', ' em 6 horas : ', '\n            Temperatura : ', ' \xB0C\n            Umidade: ', '%'], ['\n            Tempo para ', ' em 6 horas : ', '\n            Temperatura : ', ' \xB0C\n            Umidade: ', '%']);
 
 var _bot = require('../dist/bot');
 
@@ -69,11 +70,11 @@ app.post('/webhook', function (req, res) {
           // const data = JSON.parse(chunk);
           console.log(response.data);
 
-          if (response.data.Entity !== '') {
-            dataToSend = dedent(_templateObject, response.data.Heading, response.data.Entity, response.data.AbstractText, response.data.AbstractSource);
+          if (response.data.AbstractText !== '') {
+            dataToSend = dedent(_templateObject, response.data.Heading, response.data.Entity, response.data.AbstractText, response.data.AbstractSource, response.data.Image);
             console.log(dataToSend);
           } else {
-            dataToSend = dedent(_templateObject2, response.data.Heading, response.data.RelatedTopics[0].Text, response.data.RelatedTopics[1] ? response.data.RelatedTopics[1].Text : '', response.data.RelatedTopics[2] ? response.data.RelatedTopics[2].Text : '');
+            dataToSend = dedent(_templateObject2, response.data.Heading, response.data.RelatedTopics[0].Text, response.data.RelatedTopics[1] ? response.data.RelatedTopics[1].Text : '', response.data.RelatedTopics[2] ? response.data.RelatedTopics[2].Text : '', response.data.Image);
             console.log(dataToSend);
           }
 
@@ -85,23 +86,16 @@ app.post('/webhook', function (req, res) {
                 "text": [dataToSend]
               }
             }],
-            "source": "weather",
-            "payload": {
-              "telegram": {
-                "text": dataToSend
-              }
-            }
+            "source": "duckduckgo"
           });
           // });
         }
       }).catch(function (error) {
-        console.log(error);
-
         return res.json({
-          "fulfillmentText": 'Não consegui entender a cidade, pode especificar melhor ?',
+          "fulfillmentText": 'Não consegui entender, pode especificar melhor ?',
           "fulfillmentMessages": [{
             "text": {
-              "text": ['Não consegui entender a cidade, pode especificar melhor ?']
+              "text": ['Não consegui entender, pode especificar melhor ?']
             }
           }],
           "source": "weather"
@@ -117,65 +111,27 @@ app.post('/webhook', function (req, res) {
       http.get(reqUrl, function (responseFromAPI) {
         responseFromAPI.on('data', function (chunk) {
           var weather = JSON.parse(chunk);
-          var dataToSend = weather.cod === '200' ? 'Tempo para ' + weather.city.name + ' em 6 horas : ' + weather.list[1].weather[0].description + '\n           Temperatura : ' + weather.list[1].main.temp + ' \xB0C\n           Umidade: ' + weather.list[1].main.humidity + '%' : 'Não consegui entender a cidade, pode especificar melhor ?';
+          var dataToSend = weather.cod === '200' ? dedent(_templateObject3, weather.city.name, weather.list[1].weather[0].description, weather.list[1].main.temp, weather.list[1].main.humidity) : 'Não consegui entender a cidade, pode especificar melhor ?';
 
           return res.json({
             "fulfillmentText": dataToSend,
             "fulfillmentMessages": [{
               "text": {
                 "text": [dataToSend]
-              },
-              "platform": "TELEGRAM"
-            }, {
-              "payload": {
-                "telegram": {
-                  "text": dataToSend
-                }
-              },
-              "platform": "TELEGRAM"
-            }, {
-              "text": {
-                "text": [dataToSend]
-              }
-            }, {
-              "data": {
-                "telegram": {
-                  "text": dataToSend,
-                  "parse_mode": "Markdown"
-                }
               }
             }],
             "source": "weather"
           });
         });
       }, function (error) {
-        var ermsg = 'N\xE3o consegui\n        entender a cidade,\n\n        pode especificar melhor ?';
+        var ermsg = 'N\xE3o consegui entender a cidade, pode especificar melhor ?';
         return res.json({
           "fulfillmentText": ermsg,
           "fulfillmentMessages": [{
             "text": {
-              "text": ermsg,
-              "parse_mode": "Markdown"
-            },
-            "platform": "TELEGRAM"
-          }, {
-            "text": {
-              "text": ['Não consegui entender a cidade, pode especificar melhor ?']
-            }
-          }, {
-            "data": {
-              "telegram": {
-                "text": ermsg,
-                "parse_mode": "Markdown"
-              }
+              "text": [ermsg]
             }
           }],
-          "data": {
-            "telegram": {
-              "text": ermsg,
-              "parse_mode": "Markdown"
-            }
-          },
           "source": "weather"
         });
       });
