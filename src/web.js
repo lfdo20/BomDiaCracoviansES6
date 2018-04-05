@@ -68,7 +68,7 @@ app.post('/webhook', function (req, res) {
               ${response.data.AbstractSource}
               ${response.data.Image}
               `;
-            // console.log(dataToSend);
+            console.log(dataToSend);
           } else {
             dataToSend = dedent`
               ${response.data.Heading}
