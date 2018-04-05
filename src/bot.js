@@ -434,7 +434,7 @@ function botDialog(msg, match) {
       { reply_to_message_id: msg.message_id }
     ).then(() => {
       if (msgImg !== null) {
-        bot.sendMessage(msg.chat.id, msgImg.toString(), { reply_to_message_id: msg.message_id });
+        bot.sendMessage(msg.chat.id, msgImg[0], { reply_to_message_id: msg.message_id });
       }
       diagflowSession[1] = moment.unix(msg.date).add(15, 'minutes');
     });

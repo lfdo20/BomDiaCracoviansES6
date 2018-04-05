@@ -8,8 +8,6 @@ var _bot = require('../dist/bot');
 
 function _taggedTemplateLiteral(strings, raw) { return Object.freeze(Object.defineProperties(strings, { raw: { value: Object.freeze(raw) } })); }
 
-// certo é ./dist/bot
-
 /* eslint no-var : off */
 /* eslint quotes : off */
 /* eslint quote-props : off */
@@ -27,6 +25,7 @@ var _require = require('url'),
 
 var axios = require('axios');
 var dedent = require('dedent-js');
+var wdk = require('wikidata-sdk');
 
 var app = express();
 
@@ -60,25 +59,37 @@ app.post('/webhook', function (req, res) {
 
   switch (Object.keys(search).toString()) {
     case 'any':
+
+      var urlxx = wdk.searchEntities({
+        search: search['any'],
+        format: 'json',
+        language: 'pt',
+        limit: '3',
+        uselang: 'pt'
+      });
+
+      var urlxxa = wdk.getWikidataIdsFromWikipediaTitles({
+        titles: search['any'],
+        sites: 'ptwiki',
+        languages: ['pt'],
+        props: ['info', 'claims'],
+        format: 'json'
+      });
+
+      console.log(urlxxa, urlxx);
+
       var api_url = 'http://api.duckduckgo.com/?format=json&skip_disambig=1&no_html=1&no_redirect=1&t=cracoviansbot&pretty=1';
       var reqUrl = api_url + '&q=' + search['any'];
       console.log(reqUrl);
       axios.get(reqUrl, { responseType: 'json' }).then(function (response) {
         var dataToSend = void 0;
         if (response.status === 200) {
-          // response.on('data', function (chunk) {
-          // const data = JSON.parse(chunk);
-          console.log(response.data);
-
           if (response.data.AbstractText !== '') {
             dataToSend = dedent(_templateObject, response.data.Heading, response.data.Entity, response.data.AbstractText, response.data.AbstractSource, response.data.Image);
-            console.log(dataToSend);
           } else {
             dataToSend = dedent(_templateObject2, response.data.Heading, response.data.RelatedTopics[0].Text, response.data.RelatedTopics[1] ? response.data.RelatedTopics[1].Text : '', response.data.RelatedTopics[2] ? response.data.RelatedTopics[2].Text : '', response.data.Image);
-            console.log(dataToSend);
           }
 
-          // let responseData = response.result.fulfillment.data;
           return res.json({
             "fulfillmentText": dataToSend,
             "fulfillmentMessages": [{
@@ -88,7 +99,6 @@ app.post('/webhook', function (req, res) {
             }],
             "source": "duckduckgo"
           });
-          // });
         }
       }).catch(function (error) {
         return res.json({

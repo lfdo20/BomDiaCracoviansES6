@@ -105,15 +105,6 @@ var T = new _twit2.default({
 var streamTwit = T.stream('user');
 streamTwit.on('tweet', tweetReply);
 
-// Watson config
-// const watsonContext = [];
-// const watsonBot = new AssistantV1({
-//   username: process.env.ASSISTANT_USERNAME,
-//   password: process.env.ASSISTANT_PASSWORD,
-//   url: 'https://gateway.watsonplatform.net/assistant/api/',
-//   version: '2018-02-16',
-// });
-
 // Dialogflow config
 var dialogFlow = (0, _apiai2.default)(process.env.APIAI_TOKEN, { language: 'pt-BR' });
 var diagflowSession = [];
@@ -483,24 +474,20 @@ bot.onText(/^\/bdccheck(\s)(\d+)$/, function (msg, match) {
 });
 
 // Dialogo interno do bot
-
 function botDialog(msg, match) {
   if (diagflowSession.length === 0 || _moment2.default.unix(msg.date).isAfter(diagflowSession[1])) {
     diagflowSession[0] = (0, _v2.default)();
-    console.log('a', diagflowSession);
   }
 
   dialogFlow.language = 'pt-BR';
   var chatbot = dialogFlow.textRequest(msg.text, { lang: 'pt-BR', sessionId: diagflowSession[0] });
   chatbot.on('response', function (response) {
-    console.log('T2 ', response.result.fulfillment.messages);
-    console.log('T2 ', response.result);
     var resMsg = response.result.fulfillment.speech;
     var msgTxt = resMsg.replace(/(http.+)/gim, '');
     var msgImg = resMsg.match(/(http.+)/gim);
     bot.sendMessage(msg.chat.id, msgTxt, { reply_to_message_id: msg.message_id }).then(function () {
       if (msgImg !== null) {
-        bot.sendMessage(msg.chat.id, msgImg.toString(), { reply_to_message_id: msg.message_id });
+        bot.sendMessage(msg.chat.id, msgImg[0], { reply_to_message_id: msg.message_id });
       }
       diagflowSession[1] = _moment2.default.unix(msg.date).add(15, 'minutes');
     });
@@ -511,22 +498,6 @@ function botDialog(msg, match) {
   });
 
   chatbot.end();
-
-  // watsonBot.message(watsonMsg, (err, response) => {
-  //   if (err) {
-  //     console.log('error:', JSON.stringify(err, null, 2));
-  //   } else {
-  //     const watsonResponse = JSON.stringify(response, null, 2);
-  //     diagflowSession[0] = response;
-  //     // console.log(response.output.text[0]);
-  //     bot.sendMessage(
-  //       msg.chat.id, response.output.text[0],
-  //       { reply_to_message_id: msg.message_id }
-  //     ).then(() => {
-  //       diagflowSession[1] = moment.unix(msg.date).add(15, 'minutes');
-  //     });
-  //   }
-  // });
 }
 
 var dialogMatchRegx = /^(.+\s)?(@bomdiacracobot|bot|bote)(!|,|\.)?(\s.+)?$/gi;
