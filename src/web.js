@@ -139,6 +139,12 @@ app.post('/webhook', function (req, res) {
             "fulfillmentText": dataToSend,
             "fulfillmentMessages": [
               {
+                "telegram": {
+                  "text": dataToSend,
+                  "parse_mode": "Markdown"
+                }
+              },
+              {
                 "text": {
                   "text": [
                     dataToSend
