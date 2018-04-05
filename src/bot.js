@@ -438,7 +438,7 @@ function botDialog(msg, match) {
   const chatbot = dialogFlow.textRequest(msg.text, { lang: 'pt-BR', sessionId: diagflowSession[0] });
   chatbot.on('response', (response) => {
     console.log('T2 ', response.result.fulfillment.messages);
-    console.log('T2 ', response.result.fulfillment);
+    console.log('T2 ', response.result);
     bot.sendMessage(
       msg.chat.id, response.result.fulfillment.messages[0].speech,
       { reply_to_message_id: msg.message_id }

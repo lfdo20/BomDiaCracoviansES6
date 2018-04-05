@@ -56,7 +56,7 @@ app.post('/webhook', function (req, res) {
         if (response.status === 200) {
           // response.on('data', function (chunk) {
           // const data = JSON.parse(chunk);
-          console.log(response.data);
+          // console.log(response.data);
 
           if (response.data.Entity !== '') {
             dataToSend =
@@ -66,7 +66,7 @@ app.post('/webhook', function (req, res) {
               ${response.data.AbstractText}
 
               ${response.data.AbstractSource}`;
-            console.log(dataToSend);
+            // console.log(dataToSend);
           } else {
             dataToSend = dedent`
               ${response.data.Heading}
@@ -76,7 +76,7 @@ app.post('/webhook', function (req, res) {
               ${response.data.RelatedTopics[1] ? response.data.RelatedTopics[1].Text : ''}
 
               ${response.data.RelatedTopics[2] ? response.data.RelatedTopics[2].Text : ''}`;
-            console.log(dataToSend);
+            // console.log(dataToSend);
           }
 
           // let responseData = response.result.fulfillment.data;
@@ -84,21 +84,18 @@ app.post('/webhook', function (req, res) {
             "fulfillmentText": dataToSend,
             "fulfillmentMessages": [
               {
+                "platform": "TELEGRAM",
                 "text": {
-                  "text": [
-                    dataToSend
-                  ]
-                },
-                "platform": "TELEGRAM"
+                  "text": [dataToSend],
+                  "parse_mode": "Markdown"
+                }
               },
               {
+                "platform": "TELEGRAM",
                 "payload": {
-                  "telegram": {
-                    "text": dataToSend,
-                    "parse_mode": "Markdown"
-                  }
-                },
-                "platform": "TELEGRAM"
+                  "text": dataToSend,
+                  "parse_mode": "Markdown"
+                }
               },
               {
                 "text": {
@@ -107,28 +104,9 @@ app.post('/webhook', function (req, res) {
                   ]
                 }
               },
-              {
-                "data": {
-                  "telegram": {
-                    "text": dataToSend,
-                    "parse_mode": "Markdown"
-                  },
-                },
-              },
+
             ],
-            "data": {
-              "telegram": {
-                "text": dataToSend,
-                "parse_mode": "Markdown"
-              },
-            },
             "source": "duckduckgo",
-            "payload": {
-              "telegram": {
-                "text": dataToSend,
-                "parse_mode": "Markdown"
-              }
-            },
           });
           // });
         }
