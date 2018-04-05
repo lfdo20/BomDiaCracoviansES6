@@ -94,7 +94,8 @@ app.post('/webhook', function (req, res) {
               {
                 "payload": {
                   "telegram": {
-                    "text": dataToSend
+                    "text": dataToSend,
+                    "parse_mode": "Markdown"
                   }
                 },
                 "platform": "TELEGRAM"
@@ -113,12 +114,19 @@ app.post('/webhook', function (req, res) {
                     "parse_mode": "Markdown"
                   },
                 },
-              }
+              },
             ],
+            "data": {
+              "telegram": {
+                "text": dataToSend,
+                "parse_mode": "Markdown"
+              },
+            },
             "source": "duckduckgo",
             "payload": {
               "telegram": {
                 "text": dataToSend,
+                "parse_mode": "Markdown"
               }
             },
           });
@@ -192,6 +200,12 @@ app.post('/webhook', function (req, res) {
                 },
               }
             ],
+            "data": {
+              "telegram": {
+                "text": dataToSend,
+                "parse_mode": "Markdown"
+              },
+            },
             "source": "weather"
           });
         });
