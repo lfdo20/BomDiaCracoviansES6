@@ -439,10 +439,16 @@ function botDialog(msg, match) {
   chatbot.on('response', (response) => {
     console.log('T2 ', response.result.fulfillment.messages);
     console.log('T2 ', response.result);
+    const resMsg = response.result.fulfillment.speech;
+    const msgTxt = resMsg.replace(/(http.+)/gim, '');
+    const msgImg = resMsg.match(/(http.+)/gim).toString();
     bot.sendMessage(
-      msg.chat.id, response.result.fulfillment.speech,
+      msg.chat.id, msgTxt,
       { reply_to_message_id: msg.message_id }
     ).then(() => {
+      if (msgImg !== null) {
+        bot.sendMessage(msg.chat.id, msgImg, { reply_to_message_id: msg.message_id });
+      }
       diagflowSession[1] = moment.unix(msg.date).add(15, 'minutes');
     });
   });

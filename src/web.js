@@ -65,7 +65,9 @@ app.post('/webhook', function (req, res) {
 
               ${response.data.AbstractText}
 
-              ${response.data.AbstractSource}`;
+              ${response.data.AbstractSource}
+              ${response.data.Image}
+              `;
             // console.log(dataToSend);
           } else {
             dataToSend = dedent`
@@ -75,7 +77,8 @@ app.post('/webhook', function (req, res) {
 
               ${response.data.RelatedTopics[1] ? response.data.RelatedTopics[1].Text : ''}
 
-              ${response.data.RelatedTopics[2] ? response.data.RelatedTopics[2].Text : ''}`;
+              ${response.data.RelatedTopics[2] ? response.data.RelatedTopics[2].Text : ''}
+              `;
             // console.log(dataToSend);
           }
 
