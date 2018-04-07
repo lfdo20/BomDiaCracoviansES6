@@ -1,4 +1,4 @@
-// import { dataProx, dataValues } from '../dist/bot';
+import { dataProx, dataValues } from '../dist/bot';
 import dotenv from 'dotenv';
 
 /* eslint no-var : off */
