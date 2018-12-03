@@ -25,7 +25,8 @@ let bddata = {},
   rgifcount = 0,
   bdiadaycount = [[], [0, 0], 0, 0],
   nvloop = 0,
-  silentUsers;
+  silentUsers,
+  listen = false;
 
 const dropfilesurl = [[process.env.DROP_DATA, 'bddata.json', 'bddata'],
   [process.env.DROP_GIF, 'gifdata.json', 'gifdata'],
@@ -61,8 +62,8 @@ const T = new Twit({
   timeout_ms: 60 * 1000
 });
 
-const streamTwit = T.stream('user');
-streamTwit.on('tweet', tweetReply);
+// const streamTwit = T.stream('user');
+// streamTwit.on('tweet', tweetReply);
 
 // Dialogflow config
 const dialogFlow = apiai(process.env.APIAI_TOKEN, { language: 'pt-BR' });
@@ -143,8 +144,7 @@ bot.onText(/^\/bdcdia$|^\/bdcdia@bomdiacracobot$/, (msg) => {
 
 // comando para ultimos recebidos
 bot.onText(/^\/bdcultimos$|^\/bdcultimos@bomdiacracobot$/, (msg) => {
-  const text = `${bddata.latebdreceived.map(elem => `${elem}`).join('\n')}`;
-  console.log(text);
+  const text = `${bddata.latebdreceived.map(elem => elem).join('\n')}`;
   bot.sendMessage(msg.chat.id, text).then(() => {
   });
 });
@@ -171,18 +171,40 @@ bot.onText(/^\/bdchelp$|^\/bdchelp@bomdiacracobot$/, (msg) => {
 bot.onText(/^\/bdcadmin\s(.+)$/, (msg, match) => {
   if (match[1] === process.env.ADM_PASS) {
     const text = `
-    Comandos de manutenção:
+    Comandos de administração:
 
     /bdcgifdup - Checar duplicidade de gifs.
     /bdcnv - log de status Não Validar..
     /bdccheck X - Checar e validar os gifs recebidos. (X = quantidade)
-    /bdcsave - Salvar todos os arquivos de dados.`;
+    /bdcsave - Salvar todos os arquivos de dados.
+    /bdclisten - Spy de mensagens do grupo.
+    /bdclistenstop - Para o spy de mensagens.
+    /bdcsm - envia mensagem para o grupo pelo bot.`;
     bot.sendMessage(msg.chat.id, text).then(() => { });
   } else {
     const text = 'Senha errada.';
     bot.sendMessage(msg.chat.id, text).then(() => { });
   }
 });
+
+// espiar próximas mensagens
+bot.onText(/^\/bdclisten$/, (msg, match) => {
+  listen = true;
+  bot.sendMessage(msg.chat.id, 'Estamos ouvindo').then(() => { });
+});
+bot.onText(/^\/bdclistenstop$/, (msg, match) => {
+  listen = false;
+  bot.sendMessage(msg.chat.id, 'Não estamos mais ouvindo').then(() => { });
+});
+
+// enviar mensagem
+bot.onText(/^\/bdcsm\s(.+)$/, (msg, match) => {
+  const text = match[1];
+  console.log(text);
+  const cracoId = '-1001040925561';
+  bot.sendMessage(cracoId, text).then(() => { });
+});
+//
 
 // buscar gif por id/tamanho duplicados e apresentar seus ids
 const dupgifs = [];
@@ -283,6 +305,7 @@ function getGif() {
 const gftagrxdays = /^(p(u|o)+taria+)$/gi;
 const gftagrxfri = /^(.+)?(p(u|o)+taria+)(.+)?$/gi;
 const gftagrx = () => nowDay() === 'Fri' ? gftagrxfri : gftagrxdays;
+// console.log('a', gftagrx());
 
 bot.onText(gftagrx(), (msg) => {
   if (nowDay() !== 'Fri') { // Correto é Fri
@@ -449,7 +472,11 @@ function botDialog(msg, match) {
 
 const dialogMatchRegx = /^(.+\s)?(@bomdiacracobot|bot|bote)(!|,|\.)?(\s.+)?$/gi;
 bot.onText(dialogMatchRegx, (msg, match) => {
-  botDialog(msg, match);
+  if (match[1] === 'pare' || match[4] === 'pare') {
+    diagflowSession[1] = moment.unix(msg.date).add(20, 'minutes');
+  } else if (moment.unix(msg.date).isAfter(diagflowSession[1])) {
+    botDialog(msg, match);
+  }
 });
 
 // comando para analisar várias mensagens recebidas e distribuir as funções
@@ -457,6 +484,19 @@ let putexec = false,
   putstartcheck = false,
   vcmsg = '';
 bot.onText(/(.)?/gi, (msg) => {
+  console.log(`${msg.from.first_name} __ ${msg.text}`);
+  // console.log(msg.chat);
+
+  // spy de mensagens da craco && msg.chat.id === '-1001040925561'
+  // const jesusmsg = msg.text.match(/(jesus|leandro|lfdo)/gi); || jesusmsg !== null
+  console.log(listen, msg.chat.id, msg.chat.id == '-1001040925561');
+  if (listen && msg.chat.id == '-1001040925561') {
+    const spyId = '64928644';
+    const text = `${msg.from.first_name} __ ${msg.text}`;
+
+    bot.sendMessage(spyId, text).then(() => { });
+  }
+
   // mensagens de início / fim de hora da putaria
   if (nowDay() === 'Fri') {
     if (!putexec) {
@@ -770,37 +810,37 @@ function newTwit(staText) {
 }
 
 // Twitter Replyer
-const bdrxtw = /^(@\w+\s)(((bo|bu)(\w+)?)(\s?)((di|de|dj|ena)\w+))(\s?|\.+|,|!|\?)?(\s)?(.+)?$/gi;
-function tweetReply(tweet) {
-  const { latebdreceived, latebdsay, bomdia, bdiasvar, pontosvar } = bddata;
-  const replyTo = tweet.in_reply_to_screen_name; // Who is this in reply to?
-  const name = tweet.user.screen_name; // Who sent the tweet?
-  const txt = tweet.text;// What is the text?
-  const match = bdrxtw.exec(txt);
+// const bdrxtw = /^(@\w+\s)(((bo|bu)(\w+)?)(\s?)((di|de|dj|ena)\w+))(\s?|\.+|,|!|\?)?(\s)?(.+)?$/gi;
+// function tweetReply(tweet) {
+//   const { latebdreceived, latebdsay, bomdia, bdiasvar, pontosvar } = bddata;
+//   const replyTo = tweet.in_reply_to_screen_name; // Who is this in reply to?
+//   const name = tweet.user.screen_name; // Who sent the tweet?
+//   const txt = tweet.text;// What is the text?
+//   const match = bdrxtw.exec(txt);
 
-  if (name !== 'bomdiaabot' && match !== null) {
-    // receber bom dia do twitter
-    const newbdvtw = match[2];
-    const newptvtw = match[9];
-    const newBdiatw = match[11];
-    checkBdData(bddata.bomdia, newBdiatw, 'bomdia');
-    checkBdvData(newbdvtw);
+//   if (name !== 'bomdiaabot' && match !== null) {
+//     // receber bom dia do twitter
+//     const newbdvtw = match[2];
+//     const newptvtw = match[9];
+//     const newBdiatw = match[11];
+//     checkBdData(bddata.bomdia, newBdiatw, 'bomdia');
+//     checkBdvData(newbdvtw);
 
-    // enviar bom dia aleatória a um reply do twitter
-    const bdnum = Math.floor(Math.random() * bomdia.length);
-    const bdvnum = Math.floor(Math.random() * bdiasvar.length);
-    const ptvnum = Math.floor(Math.random() * pontosvar.length);
-    const bdiaback = bdiasvar[bdvnum] + pontosvar[ptvnum] + bomdia[bdnum];
-    const replytxt = `@ ${name} ${bdiaback}`;
-    T.post('statuses/update', { status: replytxt }, (err, reply) => {
-      if (err !== undefined) {
-        console.log(err);
-      } else {
-        // console.log('Tweeted: ' + reply);
-      }
-    });
-  }
-}
+//     // enviar bom dia aleatória a um reply do twitter
+//     const bdnum = Math.floor(Math.random() * bomdia.length);
+//     const bdvnum = Math.floor(Math.random() * bdiasvar.length);
+//     const ptvnum = Math.floor(Math.random() * pontosvar.length);
+//     const bdiaback = bdiasvar[bdvnum] + pontosvar[ptvnum] + bomdia[bdnum];
+//     const replytxt = `@ ${name} ${bdiaback}`;
+//     T.post('statuses/update', { status: replytxt }, (err, reply) => {
+//       if (err !== undefined) {
+//         console.log(err);
+//       } else {
+//         // console.log('Tweeted: ' + reply);
+//       }
+//     });
+//   }
+// }
 
 // checa se a frase de bom dia recebido já existe no banco
 function checkBdData(path, newBomDia, origem) {
